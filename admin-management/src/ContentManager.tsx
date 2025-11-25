@@ -51,6 +51,13 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
   const [editingImageFile, setEditingImageFile] = useState<File | null>(null)
   const [editingImagePreview, setEditingImagePreview] = useState<string | null>(null)
 
+  // Toast notification state
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'add' | 'edit' }>({
+    show: false,
+    message: '',
+    type: 'add',
+  })
+
   // refs for modal scroll containers so we can reset scroll position when reopening
   const addPanelRef = useRef<HTMLDivElement | null>(null)
   const editPanelRef = useRef<HTMLDivElement | null>(null)
@@ -247,12 +254,8 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
         throw new Error(errText || 'Failed to create variety')
       }
 
-      const data = await response.json()
+      await response.json()
       // server returns { message, data: savedVariety }
-      const savedVariety = data && data.data ? data.data : data
-
-      // Update UI with the newly created variety
-      setItems(prev => [savedVariety, ...prev])
 
       // Reset add form and close panel
       setFormData(initialFormData)
@@ -260,12 +263,40 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
       setSelectedImagePreview(null)
       setShowAddPanel(false)
 
-      alert('เพิ่มพันธุ์อ้อยเรียบร้อยแล้ว')
+      // Show loading state while fetching
+      setLoading(true)
+      
+      // Small delay to show loading state, then fetch fresh data
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // Fetch fresh data from server
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/varieties`)
+        if (response.ok) {
+          const data = await response.json()
+          setItems(data)
+        }
+      } catch (err) {
+        console.error('Error refreshing varieties:', err)
+      }
+      
+      setLoading(false)
+
+      // Show toast notification
+      setToast({
+        show: true,
+        message: 'เพิ่มพันธุ์อ้อยเรียบร้อยแล้ว',
+        type: 'add',
+      })
+      
+      // Auto-close toast after 2 seconds
+      setTimeout(() => {
+        setToast({ show: false, message: '', type: 'add' })
+      }, 2000)
     } catch (err) {
       console.error('Error creating variety:', err)
-      alert('ไม่สามารถเพิ่มพันธุ์อ้อยได้ โปรดลองอีกครั้ง')
-    } finally {
       setLoading(false)
+      alert('ไม่สามารถเพิ่มพันธุ์อ้อยได้ โปรดลองอีกครั้ง')
     }
   }
 
@@ -312,22 +343,47 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
         throw new Error(errText || 'Failed to update variety')
       }
 
-      const data = await response.json()
-      const updated = data && data.data ? data.data : data
+      await response.json()
 
-      // Replace item in list
-      setItems(prev => prev.map(it => (it._id === updated._id ? updated : it)))
-
+      // Reset edit form and close panel
       setEditingItem(null)
       setEditingImageFile(null)
       setEditingImagePreview(null)
 
-      alert('บันทึกการเปลี่ยนแปลงเรียบร้อยแล้ว')
+      // Show loading state while fetching
+      setLoading(true)
+      
+      // Small delay to show loading state, then fetch fresh data
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // Fetch fresh data from server
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/varieties`)
+        if (response.ok) {
+          const data = await response.json()
+          setItems(data)
+        }
+      } catch (err) {
+        console.error('Error refreshing varieties:', err)
+      }
+      
+      setLoading(false)
+
+      // Show toast notification
+      setToast({
+        show: true,
+        message: 'บันทึกการเปลี่ยนแปลงเรียบร้อยแล้ว',
+        type: 'edit',
+      })
+      
+      // Auto-close toast after 2 seconds
+      setTimeout(() => {
+        setToast({ show: false, message: '', type: 'edit' })
+      }, 2000)
     } catch (err) {
       console.error('Error updating variety:', err)
-      alert('ไม่สามารถบันทึกการเปลี่ยนแปลงได้ โปรดลองอีกครั้ง')
-    } finally {
       setLoading(false)
+      alert('ไม่สามารถบันทึกการเปลี่ยนแปลงได้ โปรดลองอีกครั้ง')
     }
   }
 
@@ -386,8 +442,16 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
             className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6`}
           >
             {loading && (
-              <div className="col-span-full text-center py-8">
-                <p className="text-gray-500">กำลังโหลดข้อมูล...</p>
+              <div className="col-span-full flex flex-col items-center justify-center py-16">
+                <div className="relative w-16 h-16 mb-4">
+                  {/* Spinning circle */}
+                  <svg className="animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="#e5e7eb" strokeWidth="4"></circle>
+                    <path d="M12 2a10 10 0 0 1 10 10" stroke="#16a34a" strokeWidth="4" strokeLinecap="round"></path>
+                  </svg>
+                </div>
+                <p className="text-gray-600 font-medium text-lg">กำลังโหลดข้อมูล...</p>
+                <p className="text-gray-400 text-sm mt-2">โปรดรอสักครู่</p>
               </div>
             )}
             {error && (
@@ -1101,6 +1165,18 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
               </div>
             </div>
           </div>
+
+          {/* Toast Notification - Top Right */}
+          {toast.show && (
+            <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
+              <div className="bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3">
+                <svg className="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span className="font-medium">{toast.message}</span>
+              </div>
+            </div>
+          )}
         </div>
         </div>
       </div>
