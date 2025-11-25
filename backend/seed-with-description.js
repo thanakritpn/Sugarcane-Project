@@ -1,5 +1,7 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 const mongoose = require('mongoose');
+const fs = require('fs');
+const path = require('path');
 
 // Schema ตรงกับ TypeScript model
 const varietySchema = new mongoose.Schema({
@@ -23,6 +25,13 @@ const varietySchema = new mongoose.Schema({
 
 const Variety = mongoose.model('Variety', varietySchema);
 
+// Function to get random image from the variety images folder
+function getRandomImage() {
+    const imagesPath = path.join(__dirname, 'images', 'variety');
+    const files = fs.readdirSync(imagesPath);
+    return files[Math.floor(Math.random() * files.length)];
+}
+
 const sugarcaneData = [
     {
         name: "พันธุ์อ้อย เค 88-92",
@@ -33,14 +42,19 @@ const sugarcaneData = [
         yield: "15-16",
         age: "11-12",
         sweetness: "10-12",
-        variety_image: "sugarcane1.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "F143 (แม่) X ROC1 (พ่อ)",
         growth_characteristics: [
             "เจริญเติบโตเร็วในระยะแรก",
             "ทนแล้งปานกลาง",
             "แตกกอปานกลาง 5-6 ลำต่อกอ",
             "เส้นผ่านศูนย์กลางลำ 2.6-2.8 ซม."
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในช่วงต้นฤดูฝนเพื่อให้ได้ผลผลิตสูงสุด",
+            "ใช้ปุ๋ยสูตร 15-15-15 เพื่อเพิ่มความหวาน"
+        ],
+        suitable_for: ["ภาคกลาง", "ภาคตะวันออก"]
     },
     {
         name: "พันธุ์อ้อย ขอนแก่น 3",
@@ -51,13 +65,18 @@ const sugarcaneData = [
         yield: "14-15",
         age: "10-11",
         sweetness: "11-13",
-        variety_image: "sugarcane2.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "CP70-321 X LCP85-384",
         growth_characteristics: [
             "เจริญเติบโตดี",
             "ทนแล้งดี",
             "แตกกอดี 6-7 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคตะวันออกเฉียงเหนือ"]
     },
     {
         name: "พันธุ์อ้อย อู่ทอง 2",
@@ -68,13 +87,18 @@ const sugarcaneData = [
         yield: "13-14",
         age: "11-12",
         sweetness: "10-11",
-        variety_image: "sugarcane3.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "F161 X Q117",
         growth_characteristics: [
             "เจริญเติบโตปานกลาง",
             "ทนแล้งดี",
             "แตกกอปานกลาง 5-6 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในช่วงฤดูฝนที่มีความชื้นสูง",
+            "ใช้ปุ๋ยที่มีฟอสฟอรัสสูงเพื่อกระตุ้นการเจริญเติบโตของราก"
+        ],
+        suitable_for: ["ภาคกลาง", "ภาคตะวันออกเฉียงเหนือ"]
     },
     {
         name: "พันธุ์อ้อย LK 92-11",
@@ -85,13 +109,18 @@ const sugarcaneData = [
         yield: "16-17",
         age: "12-13",
         sweetness: "11-12",
-        variety_image: "sugarcane4.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "LK72-40 X F152",
         growth_characteristics: [
             "เจริญเติบโตเร็ว",
             "ทนน้ำท่วมขัง",
             "แตกกอดี 7-8 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคกลาง", "ภาคตะวันออกเฉียงเหนือ"]
     },
     {
         name: "พันธุ์อ้อย ร้อยเอ็ด 71",
@@ -102,13 +131,18 @@ const sugarcaneData = [
         yield: "12-13",
         age: "10-11",
         sweetness: "9-10",
-        variety_image: "sugarcane5.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "ROC10 X CP72-2086",
         growth_characteristics: [
             "เจริญเติบโตช้า",
             "ทนแล้งดีมาก",
             "แตกกอน้อย 4-5 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคอีสาน"]
     },
     {
         name: "พันธุ์อ้อย เค 84-200",
@@ -119,13 +153,18 @@ const sugarcaneData = [
         yield: "15-16",
         age: "11-12",
         sweetness: "10-12",
-        variety_image: "sugarcane6.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "F150 X ROC16",
         growth_characteristics: [
             "เจริญเติบโตดี",
             "ทนแล้งปานกลาง",
             "แตกกอดี 6-7 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคกลาง", "ภาคตะวันออก"]
     },
     {
         name: "พันธุ์อ้อย ศก 72-92",
@@ -136,13 +175,18 @@ const sugarcaneData = [
         yield: "14-15",
         age: "11-12",
         sweetness: "11-13",
-        variety_image: "sugarcane7.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "CP48-103 X F146",
         growth_characteristics: [
             "เจริญเติบโตดี",
             "ทนแล้งปานกลาง",
             "แตกกอปานกลาง 5-6 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคกลาง", "ภาคตะวันออกเฉียงเหนือ"]
     },
     {
         name: "พันธุ์อ้อย อุบล 2",
@@ -153,13 +197,18 @@ const sugarcaneData = [
         yield: "13-14",
         age: "10-11",
         sweetness: "10-11",
-        variety_image: "sugarcane8.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "Q138 X F154",
         growth_characteristics: [
             "เจริญเติบโตปานกลาง",
             "ทนแล้งดี",
             "แตกกอปานกลาง 5-6 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในช่วงฤดูฝนที่มีความชื้นสูง",
+            "ใช้ปุ๋ยที่มีฟอสฟอรัสสูงเพื่อกระตุ้นการเจริญเติบโตของราก"
+        ],
+        suitable_for: ["ภาคตะวันออกเฉียงเหนือ"]
     },
     {
         name: "พันธุ์อ้อย ขอนแก่น 50",
@@ -170,13 +219,18 @@ const sugarcaneData = [
         yield: "15-16",
         age: "11-12",
         sweetness: "11-12",
-        variety_image: "sugarcane9.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "CP72-1210 X LCP85-384",
         growth_characteristics: [
             "เจริญเติบโตเร็ว",
             "ทนแล้งดี",
             "แตกกอดี 7-8 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคกลาง", "ภาคตะวันออกเฉียงเหนือ"]
     },
     {
         name: "พันธุ์อ้อย เค 95-84",
@@ -187,13 +241,18 @@ const sugarcaneData = [
         yield: "16-17",
         age: "12-13",
         sweetness: "11-13",
-        variety_image: "sugarcane10.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "F160 X Q165",
         growth_characteristics: [
             "เจริญเติบโตดีมาก",
             "ทนน้ำท่วมขัง",
             "แตกกอดีมาก 8-9 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคกลาง", "ภาคตะวันออกเฉียงเหนือ"]
     },
     {
         name: "พันธุ์อ้อย กำแพงเพชร 1",
@@ -204,13 +263,18 @@ const sugarcaneData = [
         yield: "11-12",
         age: "10-11",
         sweetness: "9-10",
-        variety_image: "sugarcane11.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "ROC1 X CP65-357",
         growth_characteristics: [
             "เจริญเติบโตช้า",
             "ทนแล้งดีมาก",
             "แตกกอน้อย 4-5 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคตะวันตก"]
     },
     {
         name: "พันธุ์อ้อย สุพรรณบุรี 1",
@@ -221,13 +285,18 @@ const sugarcaneData = [
         yield: "14-15",
         age: "11-12",
         sweetness: "10-12",
-        variety_image: "sugarcane12.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "F134 X ROC5",
         growth_characteristics: [
             "เจริญเติบโตดี",
             "ทนแล้งปานกลาง",
             "แตกกอดี 6-7 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคกลาง"]
     },
     {
         name: "พันธุ์อ้อย นครสวรรค์ 3",
@@ -238,13 +307,18 @@ const sugarcaneData = [
         yield: "15-16",
         age: "11-12",
         sweetness: "11-13",
-        variety_image: "sugarcane13.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "F147 X Q180",
         growth_characteristics: [
             "เจริญเติบโตดี",
             "ทนแล้งปานกลาง",
             "แตกกอปานกลาง 6-7 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคกลาง"]
     },
     {
         name: "พันธุ์อ้อย ชัยนาท 2",
@@ -255,13 +329,18 @@ const sugarcaneData = [
         yield: "13-14",
         age: "10-11",
         sweetness: "10-11",
-        variety_image: "sugarcane14.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "Q117 X F155",
         growth_characteristics: [
             "เจริญเติบโตปานกลาง",
             "ทนแล้งดี",
             "แตกกอปานกลาง 5-6 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในช่วงฤดูฝนที่มีความชื้นสูง",
+            "ใช้ปุ๋ยที่มีฟอสฟอรัสสูงเพื่อกระตุ้นการเจริญเติบโตของราก"
+        ],
+        suitable_for: ["ภาคกลาง", "ภาคตะวันออกเฉียงเหนือ"]
     },
     {
         name: "พันธุ์อ้อย มหาสารคาม 1",
@@ -272,13 +351,18 @@ const sugarcaneData = [
         yield: "15-16",
         age: "11-12",
         sweetness: "11-12",
-        variety_image: "sugarcane15.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "LCP85-384 X F162",
         growth_characteristics: [
             "เจริญเติบโตเร็ว",
             "ทนแล้งดี",
             "แตกกอดี 7-8 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคตะวันออกเฉียงเหนือ"]
     },
     {
         name: "พันธุ์อ้อย ลพบุรี 1",
@@ -289,13 +373,18 @@ const sugarcaneData = [
         yield: "16-17",
         age: "12-13",
         sweetness: "12-13",
-        variety_image: "sugarcane16.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "F163 X Q200",
         growth_characteristics: [
             "เจริญเติบโตดีมาก",
             "ทนน้ำท่วมขัง",
             "แตกกอดีมาก 8-10 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคกลาง", "ภาคตะวันออกเฉียงเหนือ"]
     },
     {
         name: "พันธุ์อ้อย สิงห์บุรี 2",
@@ -306,13 +395,18 @@ const sugarcaneData = [
         yield: "14-15",
         age: "11-12",
         sweetness: "10-11",
-        variety_image: "sugarcane17.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "F140 X ROC20",
         growth_characteristics: [
             "เจริญเติบโตดี",
             "ทนแล้งปานกลาง",
             "แตกกอดี 6-7 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคกลาง"]
     },
     {
         name: "พันธุ์อ้อย ราชบุรี 3",
@@ -323,13 +417,18 @@ const sugarcaneData = [
         yield: "12-13",
         age: "10-11",
         sweetness: "9-10",
-        variety_image: "sugarcane18.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "ROC10 X CP80-1743",
         growth_characteristics: [
             "เจริญเติบโตช้า",
             "ทนแล้งดีมาก",
             "แตกกอน้อย 4-5 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคตะวันตก"]
     },
     {
         name: "พันธุ์อ้อย พิษณุโลก 1",
@@ -340,13 +439,18 @@ const sugarcaneData = [
         yield: "15-16",
         age: "11-12",
         sweetness: "11-12",
-        variety_image: "sugarcane19.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "F156 X Q175",
         growth_characteristics: [
             "เจริญเติบโตดี",
             "ทนแล้งปานกลาง",
             "แตกกอปานกลาง 6-7 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคเหนือ"]
     },
     {
         name: "พันธุ์อ้อย เพชรบูรณ์ 2",
@@ -357,13 +461,18 @@ const sugarcaneData = [
         yield: "13-14",
         age: "10-11",
         sweetness: "10-11",
-        variety_image: "sugarcane20.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "Q138 X F170",
         growth_characteristics: [
             "เจริญเติบโตปานกลาง",
             "ทนแล้งดี",
             "แตกกอปานกลาง 5-6 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในช่วงฤดูฝนที่มีความชื้นสูง",
+            "ใช้ปุ๋ยที่มีฟอสฟอรัสสูงเพื่อกระตุ้นการเจริญเติบโตของราก"
+        ],
+        suitable_for: ["ภาคเหนือ"]
     },
     {
         name: "พันธุ์อ้อย กาฬสินธุ์ 1",
@@ -374,13 +483,18 @@ const sugarcaneData = [
         yield: "15-16",
         age: "11-12",
         sweetness: "11-13",
-        variety_image: "sugarcane21.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "CP72-2086 X LCP85-384",
         growth_characteristics: [
             "เจริญเติบโตเร็ว",
             "ทนแล้งดี",
             "แตกกอดี 7-8 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคอีสาน"]
     },
     {
         name: "พันธุ์อ้อย สกลนคร 2",
@@ -391,13 +505,18 @@ const sugarcaneData = [
         yield: "16-17",
         age: "12-13",
         sweetness: "11-12",
-        variety_image: "sugarcane22.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "F165 X Q185",
         growth_characteristics: [
             "เจริญเติบโตดีมาก",
             "ทนน้ำท่วมขัง",
             "แตกกอดีมาก 8-9 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคอีสาน"]
     },
     {
         name: "พันธุ์อ้อย บุรีรัมย์ 3",
@@ -408,13 +527,18 @@ const sugarcaneData = [
         yield: "11-12",
         age: "10-11",
         sweetness: "9-10",
-        variety_image: "sugarcane23.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "ROC5 X CP70-321",
         growth_characteristics: [
             "เจริญเติบโตช้า",
             "ทนแล้งดีมาก",
             "แตกกอน้อย 4-5 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคอีสาน"]
     },
     {
         name: "พันธุ์อ้อย ศรีสะเกษ 1",
@@ -425,13 +549,18 @@ const sugarcaneData = [
         yield: "14-15",
         age: "11-12",
         sweetness: "10-12",
-        variety_image: "sugarcane24.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "F148 X ROC16",
         growth_characteristics: [
             "เจริญเติบโตดี",
             "ทนแล้งปานกลาง",
-            "แตกกอดี 6-7 ลำต่อกอ"
-        ]
+            "แตกกอปานกลาง 5-6 ลำต่อกอ"
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคตะวันออกเฉียงเหนือ"]
     },
     {
         name: "พันธุ์อ้อย สุรินทร์ 2",
@@ -442,13 +571,18 @@ const sugarcaneData = [
         yield: "15-16",
         age: "11-12",
         sweetness: "11-13",
-        variety_image: "sugarcane25.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "F150 X Q190",
         growth_characteristics: [
             "เจริญเติบโตดี",
             "ทนแล้งปานกลาง",
             "แตกกอปานกลาง 6-7 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคตะวันออกเฉียงเหนือ"]
     },
     {
         name: "พันธุ์อ้อย ยโสธร 1",
@@ -459,13 +593,18 @@ const sugarcaneData = [
         yield: "13-14",
         age: "10-11",
         sweetness: "10-11",
-        variety_image: "sugarcane26.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "Q120 X F172",
         growth_characteristics: [
             "เจริญเติบโตปานกลาง",
             "ทนแล้งดี",
             "แตกกอปานกลาง 5-6 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในช่วงฤดูฝนที่มีความชื้นสูง",
+            "ใช้ปุ๋ยที่มีฟอสฟอรัสสูงเพื่อกระตุ้นการเจริญเติบโตของราก"
+        ],
+        suitable_for: ["ภาคตะวันออกเฉียงเหนือ"]
     },
     {
         name: "พันธุ์อ้อย อำนาจเจริญ 2",
@@ -476,13 +615,18 @@ const sugarcaneData = [
         yield: "15-16",
         age: "11-12",
         sweetness: "11-12",
-        variety_image: "sugarcane27.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "LCP85-384 X F175",
         growth_characteristics: [
             "เจริญเติบโตเร็ว",
             "ทนแล้งดี",
             "แตกกอดี 7-8 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคตะวันออกเฉียงเหนือ"]
     },
     {
         name: "พันธุ์อ้อย มุกดาหาร 1",
@@ -493,13 +637,18 @@ const sugarcaneData = [
         yield: "16-17",
         age: "12-13",
         sweetness: "12-13",
-        variety_image: "sugarcane28.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "F168 X Q205",
         growth_characteristics: [
             "เจริญเติบโตดีมาก",
             "ทนน้ำท่วมขัง",
             "แตกกอดีมาก 8-10 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคตะวันออกเฉียงเหนือ"]
     },
     {
         name: "พันธุ์อ้อย นครปฐม 3",
@@ -510,13 +659,18 @@ const sugarcaneData = [
         yield: "14-15",
         age: "11-12",
         sweetness: "10-11",
-        variety_image: "sugarcane29.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "F145 X ROC25",
         growth_characteristics: [
             "เจริญเติบโตดี",
             "ทนแล้งปานกลาง",
             "แตกกอดี 6-7 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคกลาง"]
     },
     {
         name: "พันธุ์อ้อย สมุทรสาคร 1",
@@ -527,13 +681,18 @@ const sugarcaneData = [
         yield: "12-13",
         age: "10-11",
         sweetness: "9-10",
-        variety_image: "sugarcane30.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "ROC15 X CP85-1491",
         growth_characteristics: [
             "เจริญเติบโตช้า",
             "ทนแล้งดีมาก",
             "แตกกอน้อย 4-5 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคตะวันตก"]
     },
     {
         name: "พันธุ์อ้อย ประจวบคีรีขันธ์ 2",
@@ -544,13 +703,18 @@ const sugarcaneData = [
         yield: "15-16",
         age: "11-12",
         sweetness: "11-12",
-        variety_image: "sugarcane31.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "F158 X Q195",
         growth_characteristics: [
             "เจริญเติบโตดี",
             "ทนแล้งปานกลาง",
             "แตกกอปานกลาง 6-7 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคกลาง"]
     },
     {
         name: "พันธุ์อ้อย เชียงใหม่ 1",
@@ -561,13 +725,18 @@ const sugarcaneData = [
         yield: "13-14",
         age: "10-11",
         sweetness: "10-11",
-        variety_image: "sugarcane32.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "Q145 X F180",
         growth_characteristics: [
             "เจริญเติบโตปานกลาง",
             "ทนแล้งดี",
             "แตกกอปานกลาง 5-6 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในช่วงฤดูฝนที่มีความชื้นสูง",
+            "ใช้ปุ๋ยที่มีฟอสฟอรัสสูงเพื่อกระตุ้นการเจริญเติบโตของราก"
+        ],
+        suitable_for: ["ภาคเหนือ"]
     },
     {
         name: "พันธุ์อ้อย เชียงราย 2",
@@ -578,13 +747,18 @@ const sugarcaneData = [
         yield: "15-16",
         age: "11-12",
         sweetness: "11-13",
-        variety_image: "sugarcane33.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "CP75-1133 X LCP85-384",
         growth_characteristics: [
             "เจริญเติบโตเร็ว",
             "ทนแล้งดี",
             "แตกกอดี 7-8 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคเหนือ"]
     },
     {
         name: "พันธุ์อ้อย ลำปาง 3",
@@ -595,13 +769,18 @@ const sugarcaneData = [
         yield: "16-17",
         age: "12-13",
         sweetness: "11-12",
-        variety_image: "sugarcane34.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "F170 X Q210",
         growth_characteristics: [
             "เจริญเติบโตดีมาก",
             "ทนน้ำท่วมขัง",
             "แตกกอดีมาก 8-9 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคเหนือ"]
     },
     {
         name: "พันธุ์อ้อย แพร่ 1",
@@ -612,13 +791,18 @@ const sugarcaneData = [
         yield: "11-12",
         age: "10-11",
         sweetness: "9-10",
-        variety_image: "sugarcane35.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "ROC20 X CP78-1628",
         growth_characteristics: [
             "เจริญเติบโตช้า",
             "ทนแล้งดีมาก",
             "แตกกอน้อย 4-5 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคเหนือ"]
     },
     {
         name: "พันธุ์อ้อย น่าน 2",
@@ -629,13 +813,18 @@ const sugarcaneData = [
         yield: "14-15",
         age: "11-12",
         sweetness: "10-12",
-        variety_image: "sugarcane36.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "F152 X ROC30",
         growth_characteristics: [
             "เจริญเติบโตดี",
             "ทนแล้งปานกลาง",
-            "แตกกอดี 6-7 ลำต่อกอ"
-        ]
+            "แตกกอปานกลาง 6-7 ลำต่อกอ"
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคเหนือ"]
     },
     {
         name: "พันธุ์อ้อย พะเยา 1",
@@ -646,13 +835,18 @@ const sugarcaneData = [
         yield: "15-16",
         age: "11-12",
         sweetness: "11-13",
-        variety_image: "sugarcane37.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "F155 X Q215",
         growth_characteristics: [
             "เจริญเติบโตดี",
             "ทนแล้งปานกลาง",
             "แตกกอปานกลาง 6-7 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคเหนือ"]
     },
     {
         name: "พันธุ์อ้อย แม่ฮ่องสอน 3",
@@ -663,13 +857,18 @@ const sugarcaneData = [
         yield: "13-14",
         age: "10-11",
         sweetness: "10-11",
-        variety_image: "sugarcane38.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "Q155 X F185",
         growth_characteristics: [
             "เจริญเติบโตปานกลาง",
             "ทนแล้งดี",
             "แตกกอปานกลาง 5-6 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคเหนือ"]
     },
     {
         name: "พันธุ์อ้อย ตาก 2",
@@ -680,13 +879,18 @@ const sugarcaneData = [
         yield: "15-16",
         age: "11-12",
         sweetness: "11-12",
-        variety_image: "sugarcane39.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "LCP85-384 X F188",
         growth_characteristics: [
             "เจริญเติบโตเร็ว",
             "ทนแล้งดี",
             "แตกกอดี 7-8 ลำต่อกอ"
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคเหนือ"]
     },
     {
         name: "พันธุ์อ้อย สุโขทัย 1",
@@ -697,14 +901,19 @@ const sugarcaneData = [
         yield: "16-18",
         age: "12-13",
         sweetness: "12-14",
-        variety_image: "sugarcane40.jpg",
+         "variety_image: '$($images[$script:index])'"; $script:index++ ,
         parent_varieties: "F172 X Q220",
         growth_characteristics: [
             "เจริญเติบโตดีมาก",
             "ทนน้ำท่วมขัง",
             "แตกกอดีมาก 9-10 ลำต่อกอ",
             "เส้นผ่านศูนย์กลางลำ 3.0-3.2 ซม."
-        ]
+        ],
+        planting_tips: [
+            "ควรปลูกในดินที่มีการระบายน้ำดี",
+            "ใส่ปุ๋ยคอกหรือปุ๋ยหมักร่วมกับปุ๋ยเคมี"
+        ],
+        suitable_for: ["ภาคกลาง", "ภาคตะวันออกเฉียงเหนือ"]
     }
 ];
 
@@ -738,3 +947,4 @@ async function seedDatabase() {
 }
 
 seedDatabase();
+

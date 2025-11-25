@@ -27,16 +27,20 @@ export const getVarietyById = async (id: string): Promise<Variety> => {
 
 // Search varieties with filters
 export const searchVarieties = async (filters: {
-    soil?: string;
+    soil_type?: string;
     pest?: string;
     disease?: string;
 }): Promise<Variety[]> => {
     const params = new URLSearchParams();
-    if (filters.soil) params.append('soil', filters.soil);
+    if (filters.soil_type) params.append('soil_type', filters.soil_type);
     if (filters.pest) params.append('pest', filters.pest);
     if (filters.disease) params.append('disease', filters.disease);
 
-    const response = await api.get<Variety[]>(`/varieties/search?${params.toString()}`);
+    const url = `/varieties/search?${params.toString()}`;
+    console.log('🌐 API Request URL:', url);
+    console.log('📦 Filters sent:', filters);
+
+    const response = await api.get<Variety[]>(url);
     return response.data;
 };
 

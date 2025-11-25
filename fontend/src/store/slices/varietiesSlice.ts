@@ -49,7 +49,9 @@ const initialState: VarietiesState = {
 export const fetchVarieties = createAsyncThunk(
     'varieties/fetchAll',
     async () => {
+        console.log('📡 Fetching all varieties...');
         const data = await api.getAllVarieties();
+        console.log('✅ Fetched varieties:', data.length);
         // Convert _id to id for frontend compatibility
         return data.map((item: any, index) => ({
             ...item,
@@ -62,7 +64,9 @@ export const fetchVarieties = createAsyncThunk(
 export const searchVarietiesAsync = createAsyncThunk(
     'varieties/search',
     async (filters: { soil?: string; pest?: string; disease?: string }) => {
+        console.log('🔎 Searching varieties with filters:', filters);
         const data = await api.searchVarieties(filters);
+        console.log('✅ Search results:', data.length, 'varieties found');
         return data.map((item: any, index) => ({
             ...item,
             id: item._id || index + 1
@@ -77,21 +81,34 @@ const varietiesSlice = createSlice({
     initialState,
     reducers: {
         setFilter: (state, action: PayloadAction<{ filterType: 'soil' | 'pest' | 'disease'; value: string }>) => {
+            console.log('🔍 Setting filter:', action.payload.filterType, '=', action.payload.value);
             state.filters[action.payload.filterType] = action.payload.value;
         },
         applyFilters: (state) => {
+            console.log('🎯 Applying filters:', state.filters);
+            console.log('📊 Total items before filter:', state.items.length);
             let filtered = state.items;
 
             if (state.filters.soil) {
+                console.log('🌱 Filtering by soil:', state.filters.soil);
+                const beforeCount = filtered.length;
                 filtered = filtered.filter(item => item.soil_type === state.filters.soil);
+                console.log(`  ✓ Soil filter: ${beforeCount} → ${filtered.length} items`);
             }
             if (state.filters.pest) {
+                console.log('🐛 Filtering by pest:', state.filters.pest);
+                const beforeCount = filtered.length;
                 filtered = filtered.filter(item => item.pest.includes(state.filters.pest));
+                console.log(`  ✓ Pest filter: ${beforeCount} → ${filtered.length} items`);
             }
             if (state.filters.disease) {
+                console.log('🦠 Filtering by disease:', state.filters.disease);
+                const beforeCount = filtered.length;
                 filtered = filtered.filter(item => item.disease.includes(state.filters.disease));
+                console.log(`  ✓ Disease filter: ${beforeCount} → ${filtered.length} items`);
             }
 
+            console.log('✅ Final filtered items:', filtered.length);
             state.filteredItems = filtered;
         },
         resetFilters: (state) => {

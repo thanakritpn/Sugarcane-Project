@@ -54,6 +54,8 @@ app.get('/api/varieties', async (_req: Request, res: Response) => {
 app.get('/api/varieties/search', async (req: Request, res: Response) => {
     try {
         const { soil_type, pest, disease } = req.query;
+        
+        console.log('🔍 Backend received query params:', { soil_type, pest, disease });
 
         // Build filter dynamically
         const filter: any = {};
@@ -62,9 +64,13 @@ app.get('/api/varieties/search', async (req: Request, res: Response) => {
         if (pest) filter.pest = { $in: [pest] };
         if (disease) filter.disease = { $in: [disease] };
 
+        console.log('🎯 MongoDB filter:', JSON.stringify(filter, null, 2));
+
         const varieties = await Variety.find(filter)
             .sort({ createdAt: -1 })
             .lean();
+
+        console.log('✅ Found varieties:', varieties.length);
 
         res.json(varieties);
     } catch (err) {

@@ -53,6 +53,8 @@ function App() {
                                     <option value="ดินร่วน">ดินร่วน</option>
                                     <option value="ดินร่วนทราย">ดินร่วนทราย</option>
                                     <option value="ดินร่วนเหนียว">ดินร่วนเหนียว</option>
+                                    <option value="ดินทราย">ดินทราย</option>
+                                    <option value="ดินเหนียว">ดินเหนียว</option>
                                 </select>
                             </div>
 
@@ -89,15 +91,13 @@ function App() {
                                         <option value="เหี่ยวเน่าแดง">เหี่ยวเน่าแดง</option>
                                         <option value="โรคแส้ดำ">โรคแส้ดำ</option>
                                         <option value="โรคจุดใบเหลือง">โรคจุดใบเหลือง</option>
-                                        <option value="โรคกอตะใคร้">โรคกอตะใคร้</option>
+                                        <option value="โรคกอตะไคร้">โรคกอตะไคร้</option>
+                                        <option value="โรคใบขาว">โรคใบขาว</option>
                                     </select>
                                 </div>
                             </div>
                             
-                            <button 
-                                onClick={handleSearch} 
-                                className="w-full bg-[#DA2C32] hover:bg-[#B52329] text-white font-bold text-xl py-4 px-8 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200"
-                            >
+                            <button className="w-full bg-[#16a34a] hover:bg-[#15803d] text-white font-bold text-xl py-4 px-8 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200">
                                 ค้นหา
                             </button>
                         </div>
@@ -186,7 +186,7 @@ function App() {
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                             </svg>
-                            <p className="text-xl font-bold text-[#DA2C32]">ไม่มีข้อมูลที่ตรงกับเงื่อนไข</p>
+                            <p className="text-xl font-bold text-[#16a34a]">ไม่มีข้อมูลที่ตรงกับเงื่อนไข</p>
                             <p className="text-gray-600 mt-2">กรุณาเลือกเงื่อนไขใหม่</p>
                         </div>
                     )}
