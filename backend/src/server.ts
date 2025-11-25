@@ -3,12 +3,32 @@ import express, { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import Variety from './models/Variety';
+import multer from 'multer'
+import * as fs from 'fs'
+import * as path from 'path'
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 app.use('/images', express.static('images'));
+
+// Ensure images/variety directory exists and configure multer storage
+const imagesVarietyDir = path.join(process.cwd(), 'images', 'variety');
+if (!fs.existsSync(imagesVarietyDir)) {
+    fs.mkdirSync(imagesVarietyDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+    // use multer/express types now that @types/multer is installed
+    destination: (_req: Request, _file: Express.Multer.File, cb: (err: Error | null, destination: string) => void) => cb(null, imagesVarietyDir),
+    filename: (_req: Request, file: Express.Multer.File, cb: (err: Error | null, filename: string) => void) => {
+        const unique = Date.now() + '-' + Math.round(Math.random() * 1e9) + path.extname(file.originalname);
+        cb(null, unique);
+    }
+});
+
+const upload = multer({ storage });
 
 // Connect to MongoDB
 mongoose.connect(process.env.DATABASE_URL!)
@@ -73,11 +93,38 @@ app.get('/api/varieties/:id', async (req: Request, res: Response): Promise<void>
 // ==================== CREATE API ====================
 
 // API: Create new variety
-app.post('/api/varieties', async (req: Request, res: Response) => {
+// Support multipart/form-data (optional file) for create
+app.post('/api/varieties', upload.single('variety_image'), async (req: Request, res: Response) => {
     try {
-        const newVariety = new Variety(req.body);
+        // req.body will contain string values when multipart/form-data is used
+        const body: any = req.body || {}
+        const file = (req as any).file
+
+        const parseArray = (val: any) => {
+            if (!val) return []
+            if (Array.isArray(val)) return val
+            try { return JSON.parse(val) } catch { return String(val).split(',').map((s:string) => s.trim()).filter(Boolean) }
+        }
+
+        const newVarietyData: any = {
+            name: body.name,
+            description: body.description,
+            soil_type: body.soil_type,
+            pest: parseArray(body.pest),
+            disease: parseArray(body.disease),
+            yield: body.yield,
+            age: body.age,
+            sweetness: body.sweetness,
+            variety_image: file ? file.filename : (body.variety_image || undefined),
+            parent_varieties: body.parent_varieties,
+            growth_characteristics: parseArray(body.growth_characteristics),
+            planting_tips: parseArray(body.planting_tips),
+            suitable_for: parseArray(body.suitable_for),
+        }
+
+        const newVariety = new Variety(newVarietyData);
         const savedVariety = await newVariety.save();
-        
+
         res.status(201).json({
             message: 'Variety created successfully',
             data: savedVariety
@@ -94,11 +141,40 @@ app.post('/api/varieties', async (req: Request, res: Response) => {
 // ==================== UPDATE API ====================
 
 // API: Update variety by ID
-app.put('/api/varieties/:id', async (req: Request, res: Response): Promise<void> => {
+// Support multipart/form-data (optional file) for update
+app.put('/api/varieties/:id', upload.single('variety_image'), async (req: Request, res: Response): Promise<void> => {
     try {
+        const body: any = req.body || {}
+        const file = (req as any).file
+
+        const parseArray = (val: any) => {
+            if (!val) return undefined
+            if (Array.isArray(val)) return val
+            try { return JSON.parse(val) } catch { return String(val).split(',').map((s:string) => s.trim()).filter(Boolean) }
+        }
+
+        const updateData: any = {
+            ...(body.name !== undefined && { name: body.name }),
+            ...(body.description !== undefined && { description: body.description }),
+            ...(body.soil_type !== undefined && { soil_type: body.soil_type }),
+            ...(body.pest !== undefined && { pest: parseArray(body.pest) }),
+            ...(body.disease !== undefined && { disease: parseArray(body.disease) }),
+            ...(body.yield !== undefined && { yield: body.yield }),
+            ...(body.age !== undefined && { age: body.age }),
+            ...(body.sweetness !== undefined && { sweetness: body.sweetness }),
+            ...(body.parent_varieties !== undefined && { parent_varieties: body.parent_varieties }),
+            ...(body.growth_characteristics !== undefined && { growth_characteristics: parseArray(body.growth_characteristics) }),
+            ...(body.planting_tips !== undefined && { planting_tips: parseArray(body.planting_tips) }),
+            ...(body.suitable_for !== undefined && { suitable_for: parseArray(body.suitable_for) }),
+        }
+
+        if (file) {
+            updateData.variety_image = file.filename
+        }
+
         const updatedVariety = await Variety.findByIdAndUpdate(
             req.params.id,
-            req.body,
+            updateData,
             { new: true, runValidators: true }
         );
 
