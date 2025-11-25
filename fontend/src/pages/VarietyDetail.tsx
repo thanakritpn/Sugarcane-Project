@@ -132,6 +132,17 @@ function VarietyDetail() {
                                     <p className="text-gray-600 ml-7">{variety.parent_varieties}</p>
                                 </div>
                             )}
+
+                            {/* Description */}
+                            {variety.description && (
+                                <div className="bg-gray-50 p-4 rounded-xl mb-4">
+                                    <h3 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
+                                        <FaLeaf className="text-[#DA2C32]" />
+                                        คำอธิบาย
+                                    </h3>
+                                    <p className="text-gray-600 ml-7">{variety.description}</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

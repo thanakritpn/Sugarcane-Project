@@ -2,6 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IVariety extends Document {
     name: string;
+    description?: string;  // คำอธิบายพันธุ์อ้อย
     soil_type: string;
     pest: string[];  // เปลี่ยนเป็น array เพื่อรองรับหลายชนิด
     disease: string[];  // เปลี่ยนเป็น array เพื่อรองรับหลายชนิด
@@ -21,6 +22,10 @@ const VarietySchema = new Schema<IVariety>({
     name: {
         type: String,
         required: true,
+    },
+    description: {
+        type: String,
+        required: false,
     },
     soil_type: {
         type: String,

@@ -74,8 +74,8 @@ function Home() {
                                 >
                                     <option value="">-- เลือกดิน --</option>
                                     <option value="ดินร่วน">ดินร่วน</option>
-                                    <option value="ร่วนทราย">ร่วนทราย</option>
-                                    <option value="ร่วนเหนียว">ร่วนเหนียว</option>
+                                    <option value="ดินร่วนทราย">ดินร่วนทราย</option>
+                                    <option value="ดินร่วนเหนียว">ดินร่วนเหนียว</option>
                                     <option value="ดินทราย">ดินทราย</option>
                                     <option value="ดินเหนียว">ดินเหนียว</option>
                                 </select>
@@ -170,29 +170,9 @@ function Home() {
                                     {/* Details */}
                                     <div className="p-5 bg-gradient-to-b from-white to-gray-50">
                                         <h3 className="text-xl font-bold text-[#DA2C32] mb-4 pb-2 border-b-2 border-gray-200">{item.name}</h3>
-                                        <div className="space-y-3">
-                                            <div className="flex items-start gap-2">
-                                                <FaSeedling className="text-green-600 mt-1 flex-shrink-0" />
-                                                <div>
-                                                    <p className="text-xs text-gray-600 font-semibold">ลักษณะดิน</p>
-                                                    <p className="text-sm text-gray-900 font-medium">{item.soil_type}</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-start gap-2">
-                                                <FaBug className="text-orange-600 mt-1 flex-shrink-0" />
-                                                <div>
-                                                    <p className="text-xs text-gray-600 font-semibold">ต้านแมลง</p>
-                                                    <p className="text-sm text-gray-900 font-medium">{Array.isArray(item.pest) ? item.pest.join(', ') : item.pest}</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-start gap-2">
-                                                <FaDisease className="text-red-600 mt-1 flex-shrink-0" />
-                                                <div>
-                                                    <p className="text-xs text-gray-600 font-semibold">ต้านโรค</p>
-                                                    <p className="text-sm text-gray-900 font-medium">{Array.isArray(item.disease) ? item.disease.join(', ') : item.disease}</p>
-                                                </div>
-                                            </div>
-                                        </div>
+                                        <p className="text-sm text-gray-700 leading-relaxed">
+                                            {item.description || 'ไม่มีคำอธิบาย'}
+                                        </p>
                                     </div>
                                 </div>
                             ))}

@@ -5,6 +5,7 @@ export interface Variety {
     _id?: string;
     id: number;
     name: string;
+    description?: string;  // คำอธิบายพันธุ์อ้อย
     soil_type: string;
     pest: string[];  // เปลี่ยนเป็น array
     disease: string[];  // เปลี่ยนเป็น array
