@@ -88,28 +88,88 @@
 
 // export default App
 import React, { useState } from 'react';
-import axios from 'axios';
 import { FaHourglassHalf } from 'react-icons/fa';
 
-
+// Mock data สำหรับทดสอบ UI
+const mockData = [
+    {
+        id: 1,
+        name: 'พันธุ์อ้อย เค 88-92',
+        soil_type: 'ดินร่วนเหนียว',
+        pest: 'หนอนเจาะลำต้น',
+        disease: 'โรคใบขาว',
+        yield: '15-16',
+        age: '11-12',
+        sweetness: '10-12',
+        variety_image: 'sugarcane1.jpg'
+    },
+    {
+        id: 2,
+        name: 'พันธุ์อ้อย LK 92-11',
+        soil_type: 'ดินร่วน',
+        pest: 'หนอนกออ้อย',
+        disease: 'เหี่ยวเน่าแดง',
+        yield: '18-20',
+        age: '12-14',
+        sweetness: '11-13',
+        variety_image: 'sugarcane2.jpg'
+    },
+    {
+        id: 3,
+        name: 'พันธุ์อ้อย ขอนแก่น 3',
+        soil_type: 'ดินร่วนทราย',
+        pest: 'หวี่ขาว',
+        disease: 'โรคแส้ดำ',
+        yield: '14-15',
+        age: '10-11',
+        sweetness: '9-11',
+        variety_image: 'sugarcane3.jpg'
+    },
+    {
+        id: 4,
+        name: 'พันธุ์อ้อย อุตรดิตถ์ 1',
+        soil_type: 'ดินร่วนเหนียว',
+        pest: 'หนอนเจาะลำต้น',
+        disease: 'โรคกอตะใคร้',
+        yield: '16-18',
+        age: '11-13',
+        sweetness: '10-12',
+        variety_image: 'sugarcane4.jpg'
+    },
+    {
+        id: 5,
+        name: 'พันธุ์อ้อย เชียงราย 60',
+        soil_type: 'ดินร่วน',
+        pest: 'หวี่ขาว',
+        disease: 'โรคจุดใบเหลือง',
+        yield: '17-19',
+        age: '12-13',
+        sweetness: '11-14',
+        variety_image: 'sugarcane5.jpg'
+    }
+];
 
 function App() {
     const [soil, setSoil] = useState('');
     const [pest, setPest] = useState('');
     const [disease, setDisease] = useState('');
-    const [results, setResults] = useState([]);
+    const [results, setResults] = useState(mockData); // เริ่มต้นด้วย mock data
 
-    const handleSearch = async () => {
-        try {
-            const response = await axios.post('http://localhost:5000/search', {
-                soil,
-                pest,
-                disease
-            });
-            setResults(response.data);
-        } catch (error) {
-            console.error('Error fetching data:', error);
+    const handleSearch = () => {
+        // Filter mock data based on selections
+        let filtered = mockData;
+
+        if (soil) {
+            filtered = filtered.filter(item => item.soil_type === soil);
         }
+        if (pest) {
+            filtered = filtered.filter(item => item.pest === pest);
+        }
+        if (disease) {
+            filtered = filtered.filter(item => item.disease === disease);
+        }
+
+        setResults(filtered);
     };
 
     return (
@@ -179,9 +239,10 @@ function App() {
             </form>
               
               <img 
-  src={`http://localhost:5000/images/variety/${item.variety_image}`} 
+  src={`/sugarcane-bg.jpg`}
   alt={item.name} 
   width="150" 
+  onError={(e) => { e.target.src = '/sugarcane-bg.jpg'; }}
 />
               </div>
               <h3 className="name">{item.name}</h3>
