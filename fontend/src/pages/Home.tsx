@@ -1,18 +1,70 @@
 ﻿import { useNavigate } from 'react-router-dom';
-import { FaSeedling, FaBug, FaDisease } from 'react-icons/fa';
+import { FaSeedling, FaBug, FaDisease, FaHeart, FaRegHeart } from 'react-icons/fa';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { setFilter, applyFilters, fetchVarieties, searchVarietiesAsync } from '../store/slices/varietiesSlice';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { getUserFavorites, addFavorite, removeFavorite } from '../services/api';
+import LoginModal from '../components/LoginModal';
+import FavoritesModal from '../components/FavoritesModal';
+import FloatingBookIcon from '../components/FloatingBookIcon';
+import LogoutButton from '../components/LogoutButton';
 
 function Home() {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
     const { filteredItems, filters, loading, error } = useAppSelector((state) => state.varieties);
 
+    // Favorites (for logged-in users comes from backend; for anonymous users fallback to localStorage)
+    const [favorites, setFavorites] = useState<string[]>(() => {
+        try {
+            const raw = localStorage.getItem('favorites');
+            return raw ? JSON.parse(raw) : [];
+        } catch (e) {
+            return [];
+        }
+    });
+
+    // (user info is stored in localStorage by LoginModal)
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('favorites', JSON.stringify(favorites));
+        } catch (e) {
+            // ignore
+        }
+    }, [favorites]);
+
+    // Login state (simple localStorage-backed)
+    const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => !!(localStorage.getItem('user')));
+
+    const [showLoginModal, setShowLoginModal] = useState(false);
+    const [pendingFavoriteId, setPendingFavoriteId] = useState<string | null>(null);
+    const [showFavoritesModal, setShowFavoritesModal] = useState(false);
+
     // Fetch varieties on mount
     useEffect(() => {
         dispatch(fetchVarieties());
     }, [dispatch]);
+
+    // When user logs in (or when component mounts while user already logged in), load favorites from backend
+    useEffect(() => {
+        const loadFavorites = async () => {
+            try {
+                const raw = localStorage.getItem('user');
+                if (!raw) return;
+                const u = JSON.parse(raw) as { email: string; id?: string };
+                if (!u?.id) return; // need user id to fetch favorites
+                const favs = await getUserFavorites(u.id);
+                setFavorites((favs || []).map((v) => v._id || ''));
+            } catch (err) {
+                console.error('Failed to load user favorites', err);
+            }
+        };
+
+        if (isLoggedIn) {
+            loadFavorites();
+        }
+    }, [isLoggedIn]);
 
     const handleFilterChange = (filterType: 'soil' | 'pest' | 'disease', value: string) => {
         dispatch(setFilter({ filterType, value }));
@@ -38,6 +90,59 @@ function Home() {
         }
     };
 
+    const toggleFavorite = (id: string | undefined) => {
+        if (!id) return;
+        if (!isLoggedIn) {
+            // prompt login and remember pending id
+            setPendingFavoriteId(id);
+            setShowLoginModal(true);
+            return;
+        }
+        // Optimistic UI update + backend call
+        const raw = localStorage.getItem('user');
+        const u = raw ? JSON.parse(raw) as { email: string; id?: string } : null;
+        const userId = u?.id;
+
+        if (!userId) {
+            console.warn('No userId found in localStorage despite isLoggedIn');
+            return;
+        }
+
+        const currentlyFavorited = favorites.includes(id);
+        // update UI immediately
+        setFavorites((prev) => (currentlyFavorited ? prev.filter((x) => x !== id) : [...prev, id]));
+
+        // call backend
+        (async () => {
+            try {
+                if (!currentlyFavorited) {
+                    await addFavorite(userId, id);
+                } else {
+                    await removeFavorite(userId, id);
+                }
+            } catch (err) {
+                console.error('Favorite API error', err);
+                // revert UI on error
+                setFavorites((prev) => (currentlyFavorited ? [...prev, id] : prev.filter((x) => x !== id)));
+                // optionally show an error to user
+                alert('ไม่สามารถบันทึกการถูกใจ กรุณาลองใหม่');
+            }
+        })();
+    };
+
+    const handleLogin = (_email: string) => {
+        setIsLoggedIn(true);
+        setShowLoginModal(false);
+        // reload user from localStorage (LoginModal stored id)
+        // nothing else needed here; loadFavorites will read localStorage to fetch favorites
+
+        // if there was a pending favorite, try toggling it now (will call backend)
+        if (pendingFavoriteId) {
+            toggleFavorite(pendingFavoriteId);
+            setPendingFavoriteId(null);
+        }
+    };
+
     return (
         <>
             {/* Header */}
@@ -55,6 +160,7 @@ function Home() {
                         ค้นหาพันธุ์อ้อยที่เหมาะสม
                     </p>
                 </div>
+                <LogoutButton />
             </header>
 
             <div className="min-h-screen bg-gray-50">
@@ -166,20 +272,29 @@ function Home() {
                                 >
                                     {/* Image */}
                                     <div className="relative h-64 overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300">
-                                        <img 
-                                            src={item.variety_image ? `http://localhost:5001/images/variety/${item.variety_image}` : '/sugarcane-bg.jpg'}
-                                            alt={item.name}
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => { 
-                                                console.log(`âŒ Image failed to load for ${item.name}:`, item.variety_image);
-                                                const target = e.target as HTMLImageElement;
-                                                target.src = '/sugarcane-bg.jpg'; 
-                                            }}
-                                            onLoad={() => {
-                                                console.log(`âœ… Image loaded successfully for ${item.name}:`, item.variety_image);
-                                            }}
-                                        />
-                                    </div>
+                                            {/* Favorite heart (stopPropagation so card click still works) */}
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); toggleFavorite(item._id); }}
+                                                aria-label={favorites.includes(item._id || '') ? 'ยกเลิกถูกใจ' : 'ถูกใจ'}
+                                                className={`absolute top-3 right-3 z-20 p-2 rounded-full bg-white/90 hover:bg-white transition-shadow shadow-sm ${favorites.includes(item._id || '') ? 'text-red-600' : 'text-gray-400'}`}
+                                                >
+                                                {favorites.includes(item._id || '') ? <FaHeart /> : <FaRegHeart />}
+                                            </button>
+
+                                            <img 
+                                                src={item.variety_image ? `http://localhost:5001/images/variety/${item.variety_image}` : '/sugarcane-bg.jpg'}
+                                                alt={item.name}
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => { 
+                                                    console.log(`âŒ Image failed to load for ${item.name}:`, item.variety_image);
+                                                    const target = e.target as HTMLImageElement;
+                                                    target.src = '/sugarcane-bg.jpg'; 
+                                                }}
+                                                onLoad={() => {
+                                                    console.log(`âœ… Image loaded successfully for ${item.name}:`, item.variety_image);
+                                                }}
+                                            />
+                                        </div>
                                     {/* Details */}
                                     <div className="p-5 bg-gradient-to-b from-white to-gray-50">
                                         <h3 className="text-xl font-bold text-[#16a34a] mb-4 pb-2 border-b-2 border-gray-200">{item.name}</h3>
@@ -208,6 +323,24 @@ function Home() {
                     <p className="text-lg">© 2025 ระบบแนะนำพันธุ์อ้อย</p>
                 </div>
             </footer>
+            <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} onLogin={handleLogin} />
+            <FloatingBookIcon
+                count={favorites.length}
+                onClick={() => {
+                    if (!isLoggedIn) {
+                        setShowLoginModal(true);
+                        return;
+                    }
+                    setShowFavoritesModal(true);
+                }}
+            />
+            <FavoritesModal 
+              isOpen={showFavoritesModal} 
+              onClose={() => setShowFavoritesModal(false)}
+              onRemoveFavorite={(varietyId) => {
+                setFavorites((prev) => prev.filter((x) => x !== varietyId));
+              }}
+            />
         </>
     );
 }

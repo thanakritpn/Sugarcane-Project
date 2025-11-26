@@ -67,6 +67,24 @@ export const deleteVariety = async (id: string): Promise<void> => {
     await api.delete(`/varieties/${id}`);
 };
 
+// ==================== FAVORITE APIs ====================
+
+// Get user's favorites (return full Variety objects)
+export const getUserFavorites = async (userId: string): Promise<Variety[]> => {
+    const response = await api.get<{ message: string; data: Variety[] }>(`/favorites/${userId}`);
+    return response.data.data;
+};
+
+// Add favorite
+export const addFavorite = async (userId: string, varietyId: string): Promise<void> => {
+    await api.post('/favorites', { userId, varietyId });
+};
+
+// Remove favorite
+export const removeFavorite = async (userId: string, varietyId: string): Promise<void> => {
+    await api.delete(`/favorites/${userId}/${varietyId}`);
+};
+
 // ==================== SEED API (for testing) ====================
 
 // Seed initial data

@@ -1,7 +1,10 @@
 ﻿import { useParams, useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../store/hooks';
-import { FaArrowLeft, FaSeedling, FaBug, FaDisease, FaLeaf, FaChartLine } from 'react-icons/fa';
-import { GiHoneycomb } from 'react-icons/gi';
+import { useState, useEffect } from 'react';
+import { FaArrowLeft, FaSeedling, FaBug, FaLeaf, FaChartLine, FaHeart, FaRegHeart } from 'react-icons/fa';
+import LoginModal from '../components/LoginModal';
+import FloatingBookIcon from '../components/FloatingBookIcon';
+import { addFavorite, removeFavorite, getUserFavorites } from '../services/api';
 
 function VarietyDetail() {
     const { id } = useParams<{ id: string }>();
@@ -9,6 +12,102 @@ function VarietyDetail() {
     const { items, loading, error } = useAppSelector((state) => state.varieties);
     
     const variety = items.find((item) => item._id === id);
+
+    // favorites (database-backed) stored as variety id strings
+    const [favorites, setFavorites] = useState<string[]>([]);
+
+    // Login & favorite handling: if not logged in, show login modal and remember pending id
+    const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => !!(localStorage.getItem('user')));
+
+    // store userId (Mongo _id) from localStorage user object
+    const [userId, setUserId] = useState<string | null>(() => {
+        try {
+            const raw = localStorage.getItem('user');
+            const u = raw ? JSON.parse(raw) : null;
+            return u?.id || null;
+        } catch (e) {
+            return null;
+        }
+    });
+
+    const [showLoginModal, setShowLoginModal] = useState(false);
+    const [pendingFavoriteId, setPendingFavoriteId] = useState<string | null>(null);
+
+    // Load favorites when logged in
+    useEffect(() => {
+        if (isLoggedIn && userId) {
+            loadFavorites();
+        }
+    }, [isLoggedIn, userId]);
+
+    const loadFavorites = async () => {
+        try {
+            if (!userId) return;
+            const favs = await getUserFavorites(userId);
+            // favs is Variety[] from backend; map to ids
+            setFavorites((favs || []).map((v) => v._id || ''));
+        } catch (err) {
+            console.error('Failed to load favorites:', err);
+        }
+    };
+
+    const toggleFavorite = (id: string | undefined) => {
+        if (!id) return;
+        if (!isLoggedIn) {
+            setPendingFavoriteId(id);
+            setShowLoginModal(true);
+            return;
+        }
+
+        // Toggle favorite
+        if (favorites.includes(id)) {
+            removeFavoriteItem(id);
+        } else {
+            addFavoriteItem(id);
+        }
+    };
+
+    const addFavoriteItem = async (varietyId: string) => {
+        try {
+            if (!userId) return;
+            await addFavorite(userId, varietyId);
+            setFavorites((prev) => [...prev, varietyId]);
+        } catch (err: any) {
+            // Handle duplicate error gracefully
+            if (err.response?.status === 409) {
+                console.log('Already in favorites');
+            } else {
+                console.error('Failed to add favorite:', err);
+            }
+        }
+    };
+
+    const removeFavoriteItem = async (varietyId: string) => {
+        try {
+            if (!userId) return;
+            await removeFavorite(userId, varietyId);
+            setFavorites((prev) => prev.filter((x) => x !== varietyId));
+        } catch (err) {
+            console.error('Failed to remove favorite:', err);
+        }
+    };
+
+    const handleLogin = (_email: string) => {
+        setIsLoggedIn(true);
+        // reload userId from localStorage
+        try {
+            const raw = localStorage.getItem('user');
+            const u = raw ? JSON.parse(raw) : null;
+            setUserId(u?.id || null);
+        } catch (e) {
+            setUserId(null);
+        }
+        setShowLoginModal(false);
+        if (pendingFavoriteId) {
+            addFavoriteItem(pendingFavoriteId);
+            setPendingFavoriteId(null);
+        }
+    };
 
     if (loading) {
         return (
@@ -81,6 +180,15 @@ function VarietyDetail() {
                         <div className="grid grid-cols-1 lg:grid-cols-5 gap-0">
                             {/* Image Section - 2/5 */}
                             <div className="lg:col-span-2 relative h-80 lg:h-auto bg-gradient-to-br from-gray-200 to-gray-300">
+                                {/* Favorite heart on detail hero */}
+                                <button
+                                    onClick={() => toggleFavorite(variety._id)}
+                                    aria-label={favorites.includes(variety._id || '') ? 'ยกเลิกถูกใจ' : 'ถูกใจ'}
+                                    className={`absolute top-4 right-4 z-30 p-2 rounded-full bg-white/90 hover:bg-white transition-shadow shadow-sm ${favorites.includes(variety._id || '') ? 'text-red-600' : 'text-gray-400'}`}
+                                >
+                                    {favorites.includes(variety._id || '') ? <FaHeart /> : <FaRegHeart />}
+                                </button>
+
                                 <img 
                                     src={variety.variety_image ? `http://localhost:5001/images/variety/${variety.variety_image}` : '/sugarcane-bg.jpg'}
                                     alt={variety.name}
@@ -265,6 +373,17 @@ function VarietyDetail() {
                     </div>
                 </div>
             </div>
+            <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} onLogin={handleLogin} />
+            <FloatingBookIcon
+                count={favorites.length}
+                onClick={() => {
+                    if (!isLoggedIn) {
+                        setShowLoginModal(true);
+                        return;
+                    }
+                    alert('รายการที่ถูกใจ (ยังไม่พร้อม)');
+                }}
+            />
         </>
     );
 }

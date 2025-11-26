@@ -3,6 +3,9 @@ import express, { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import Variety from './models/Variety';
+import User from './models/User';
+import Favorite from './models/Favorite';
+import bcrypt from 'bcryptjs';
 import multer from 'multer'
 import * as fs from 'fs'
 import * as path from 'path'
@@ -411,6 +414,220 @@ app.post('/api/seed', async (_req: Request, res: Response) => {
     }
 });
 
+// ==================== USER AUTH ====================
+
+// Ensure initial users exist (create on startup if not present)
+async function ensureInitialUser() {
+    try {
+        const users = [
+            { email: 'aofza1508@gmail.com', password: '111111' },
+            { email: 'jeeranan.prak@gmail.com', password: '111111' }
+        ];
+
+        for (const userData of users) {
+            const existing = await User.findOne({ email: userData.email });
+            if (!existing) {
+                const hashed = await bcrypt.hash(userData.password, 10);
+                const u = new User({ email: userData.email, password: hashed });
+                await u.save();
+                console.log(`✓ Seeded user: ${userData.email}`);
+            } else {
+                console.log(`User already exists: ${userData.email}`);
+            }
+        }
+    } catch (err) {
+        console.error('Error ensuring initial users:', err);
+    }
+}
+
+ensureInitialUser();
+
+// Ensure favorite indexes are correct (compound unique on userId + varietyId).
+async function ensureFavoriteIndexes() {
+    try {
+        // list existing indexes on favorites collection
+        const indexes = await Favorite.collection.indexes();
+        for (const idx of indexes) {
+            if (!idx.key) continue;
+            const keyNames = Object.keys(idx.key);
+
+            // skip the default _id_ index
+            if (keyNames.length === 1 && keyNames[0] === '_id') continue;
+
+            // If an index uses old/wrong field names like 'user' or 'variety', drop it.
+            if (keyNames.includes('user') || keyNames.includes('variety')) {
+                if (!idx.name) continue;
+                try {
+                    await Favorite.collection.dropIndex(idx.name as string);
+                    console.log(`✓ Dropped old/bad index on favorites: ${idx.name} (keys: ${keyNames.join(',')})`);
+                } catch (dropErr) {
+                    console.warn('Could not drop index', idx.name, dropErr);
+                }
+                continue;
+            }
+
+            // If there's a unique index on only userId (or any unexpected unique index), drop it to avoid blocking inserts
+            if (idx.unique && !(keyNames.length === 2 && keyNames.includes('userId') && keyNames.includes('varietyId'))) {
+                if (!idx.name) continue;
+                try {
+                    await Favorite.collection.dropIndex(idx.name as string);
+                    console.log(`✓ Dropped unexpected unique index on favorites: ${idx.name} (keys: ${keyNames.join(',')})`);
+                } catch (dropErr) {
+                    console.warn('Could not drop index', idx.name, dropErr);
+                }
+            }
+        }
+
+        // create compound unique index on the correct fields
+        await Favorite.collection.createIndex({ userId: 1, varietyId: 1 }, { unique: true });
+        console.log('✓ Ensured compound unique index on favorites (userId + varietyId)');
+    } catch (err) {
+        console.error('Error ensuring favorite indexes:', err);
+    }
+}
+
+ensureFavoriteIndexes();
+
+// API: POST /api/auth/login
+app.post('/api/auth/login', async (req: Request, res: Response) => {
+    try {
+        const { email, password } = req.body || {};
+        if (!email || !password) {
+            res.status(400).json({ error: 'Missing email or password' });
+            return;
+        }
+
+        const user = await User.findOne({ email: String(email).toLowerCase().trim() });
+        if (!user) {
+            res.status(401).json({ error: 'Invalid credentials' });
+            return;
+        }
+
+        const match = await bcrypt.compare(String(password), user.password);
+        if (!match) {
+            res.status(401).json({ error: 'Invalid credentials' });
+            return;
+        }
+
+        // For simplicity return basic user info (no token). Frontend will store user in localStorage.
+        // Include the user's _id so frontend can use it as userId for favorites
+        res.json({ email: user.email, id: user._id });
+    } catch (err) {
+        console.error('Login error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// ==================== FAVORITE APIs ====================
+
+// API: Get user's favorites
+app.get('/api/favorites/:userId', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { userId } = req.params;
+        
+        if (!userId) {
+            res.status(400).json({ error: 'userId is required' });
+            return;
+        }
+
+        // Find favorite records for the user, then return the full variety objects
+        const favorites = await Favorite.find({ userId }).lean();
+        const varietyIds = favorites.map(fav => fav.varietyId).filter(Boolean);
+
+        // If there are no favorites, return empty array
+        if (varietyIds.length === 0) {
+            res.json({ message: 'Favorites retrieved successfully', data: [] });
+            return;
+        }
+
+        // Fetch variety documents for these ids
+        const varieties = await Variety.find({ _id: { $in: varietyIds } }).lean();
+
+        res.json({
+            message: 'Favorites retrieved successfully',
+            data: varieties
+        });
+    } catch (err: any) {
+        console.error('Get favorites error:', err);
+        res.status(500).json({ 
+            error: 'Failed to get favorites',
+            details: err.message 
+        });
+    }
+});
+
+// API: Add favorite
+app.post('/api/favorites', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { userId, varietyId } = req.body || {};
+
+        if (!userId || !varietyId) {
+            res.status(400).json({ error: 'userId and varietyId are required' });
+            return;
+        }
+
+        // Check if variety exists
+        const variety = await Variety.findById(varietyId);
+        if (!variety) {
+            res.status(404).json({ error: 'Variety not found' });
+            return;
+        }
+
+        console.log('POST /api/favorites body:', { userId, varietyId });
+
+        // Use upsert to avoid duplicate key errors and make the operation idempotent.
+        const result = await Favorite.findOneAndUpdate(
+            { userId, varietyId },
+            { $setOnInsert: { userId, varietyId } },
+            { new: true, upsert: true, setDefaultsOnInsert: true }
+        ).lean();
+
+        res.status(200).json({
+            message: 'Favorite added (or already exists)',
+            data: result
+        });
+    } catch (err: any) {
+        console.error('Add favorite error:', err);
+        // provide detailed error info for debugging
+        const code = err?.code || null;
+        const message = err?.message || String(err);
+        res.status(500).json({
+            error: 'Failed to add favorite',
+            details: { code, message }
+        });
+    }
+});
+
+// API: Remove favorite
+app.delete('/api/favorites/:userId/:varietyId', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { userId, varietyId } = req.params;
+
+        if (!userId || !varietyId) {
+            res.status(400).json({ error: 'userId and varietyId are required' });
+            return;
+        }
+
+        const result = await Favorite.findOneAndDelete({ userId, varietyId });
+
+        if (!result) {
+            res.status(404).json({ error: 'Favorite not found' });
+            return;
+        }
+
+        res.json({
+            message: 'Favorite removed successfully',
+            data: result
+        });
+    } catch (err: any) {
+        console.error('Remove favorite error:', err);
+        res.status(500).json({ 
+            error: 'Failed to remove favorite',
+            details: err.message 
+        });
+    }
+});
+
 // Start server
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
@@ -423,6 +640,9 @@ app.listen(PORT, () => {
     console.log(`   PUT    /api/varieties/:id      - Update variety`);
     console.log(`   DELETE /api/varieties/:id      - Delete variety`);
     console.log(`   POST   /api/seed               - Seed initial data`);
+    console.log(`   GET    /api/favorites/:userId  - Get user favorites`);
+    console.log(`   POST   /api/favorites          - Add favorite`);
+    console.log(`   DELETE /api/favorites/:userId/:varietyId - Remove favorite`);
 });
 
 // Graceful shutdown
