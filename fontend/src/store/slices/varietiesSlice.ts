@@ -52,7 +52,6 @@ export const fetchVarieties = createAsyncThunk(
         console.log('📡 Fetching all varieties...');
         const data = await api.getAllVarieties();
         console.log('✅ Fetched varieties:', data.length);
-        // Convert _id to id for frontend compatibility
         return data.map((item: any, index) => ({
             ...item,
             id: item._id || index + 1

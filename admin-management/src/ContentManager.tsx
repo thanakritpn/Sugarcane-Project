@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
+import VarietyModal from './components/VarietyModal'
 
 type MenuItem = {
   _id?: string
@@ -50,6 +51,9 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
 
   const [editingImageFile, setEditingImageFile] = useState<File | null>(null)
   const [editingImagePreview, setEditingImagePreview] = useState<string | null>(null)
+
+  // Delete confirmation modal state
+  const [deleteModal, setDeleteModal] = useState<{ show: boolean; itemId?: string }>({ show: false })
 
   // Toast notification state
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'add' | 'edit' }>({
@@ -105,30 +109,24 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
     if (editPanelRef.current) editPanelRef.current.scrollTop = 0
   }
 
-  // Delete variety
+  // Delete variety (no confirm here)
   const handleDeleteItem = async (id: string | undefined) => {
     if (!id) return
-    
-    if (!window.confirm('คุณแน่ใจว่าต้องการลบพันธุ์อ้อยนี้?')) {
-      return
-    }
-
     try {
       const response = await fetch(`${API_BASE_URL}/api/varieties/${id}`, {
         method: 'DELETE',
       })
-      
       if (!response.ok) {
         throw new Error('Failed to delete variety')
       }
-
-      // Remove item from state
       setItems(items.filter(item => item._id !== id))
-      alert('ลบพันธุ์อ้อยเรียบร้อยแล้ว')
+      setToast({ show: true, message: 'ลบพันธุ์อ้อยเรียบร้อยแล้ว', type: 'edit' })
+      setTimeout(() => setToast({ show: false, message: '', type: 'edit' }), 2000)
     } catch (err) {
       console.error('Error deleting variety:', err)
       alert('เกิดข้อผิดพลาดในการลบ')
     }
+    setDeleteModal({ show: false })
   }
   useEffect(() => {
     const fetchVarieties = async () => {
@@ -393,17 +391,30 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
       <nav className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
         <div className="px-8 py-4">
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-8">
-            <h1 className="text-lg font-bold text-gray-900 whitespace-nowrap">รายการพันธุ์อ้อยทั้งหมด</h1>
+            <div className="flex items-center gap-3">
+              {/* Sugarcane SVG Logo */}
+              <span className="inline-block">
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <ellipse cx="20" cy="20" rx="18" ry="18" fill="#E6F4EA" />
+                  <path d="M13 30C15 22 17 14 20 10C23 14 25 22 27 30" stroke="#16A34A" strokeWidth="2.5" strokeLinecap="round"/>
+                  <path d="M18 28C19 24 20 20 22 16" stroke="#22C55E" strokeWidth="2" strokeLinecap="round"/>
+                  <path d="M15 25C16.5 21 18.5 17 20 15" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round"/>
+                  <circle cx="20" cy="20" r="18" stroke="#16A34A" strokeWidth="1.5"/>
+                </svg>
+              </span>
+              <h1 className="text-lg font-bold text-gray-900 whitespace-nowrap">รายการพันธุ์อ้อยทั้งหมด</h1>
+            </div>
 
             <div className="flex-1 flex items-center justify-center">
               <div className="w-full max-w-2xl">
                 <label className="sr-only">ค้นหา</label>
                 <div className="relative">
                   <input
+                    type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="ค้นหาชื่อพันธุ์อ้อย หรือ คำอธิบาย..."
-                    className="w-full border border-gray-300 rounded-full px-4 py-2 pl-10 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    placeholder="ค้นหา..."
+                    className="w-full px-4 py-2 pl-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#16A34A] text-gray-900"
                   />
                   <svg className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M12.9 14.32a8 8 0 111.414-1.414l4.387 4.386-1.414 1.415-4.387-4.387zM8 14a6 6 0 100-12 6 6 0 000 12z" clipRule="evenodd" />
@@ -431,7 +442,7 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
           <div className="flex items-center justify-end mb-6">
             <button
               onClick={() => setShowAddPanel(true)}
-              className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-medium transition shadow-sm"
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white font-semibold py-2.5 px-8 rounded-lg shadow-md hover:shadow-lg transition"
             >
               + เพิ่มพันธุ์อ้อย
             </button>
@@ -460,15 +471,22 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
               </div>
             )}
             {!loading && !error && filteredItems.length === 0 && (
-              <div className="col-span-full text-center py-8">
-                <p className="text-gray-500">ไม่พบข้อมูล</p>
+              <div className="col-span-full flex flex-col items-center justify-center py-16 animate-in fade-in duration-200">
+                <div className="bg-gradient-to-r from-green-100 via-white to-green-100 rounded-full p-6 shadow-lg mb-4">
+                  <svg className="w-16 h-16 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8" stroke="#16A34A" strokeWidth="2" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35" stroke="#16A34A" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-700 mb-2">ไม่พบข้อมูล</h2>
+                <p className="text-gray-500 text-lg">ลองเปลี่ยนคำค้นหาหรือเพิ่มข้อมูลใหม่</p>
               </div>
             )}
             {!loading && filteredItems.map((item) => (
               <div key={item._id || item.id} className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300 flex flex-col h-full relative group">
                 {/* Delete Button */}
                 <button
-                  onClick={() => handleDeleteItem(item._id)}
+                  onClick={() => setDeleteModal({ show: true, itemId: item._id })}
                   className="absolute top-3 right-3 text-gray-400 hover:text-red-600 transition z-10 bg-white/80 hover:bg-white rounded-lg p-1"
                   title="ลบเมนู"
                   aria-label="ลบเมนู"
@@ -497,7 +515,7 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
                 {/* Content */}
                 <div className="p-4 flex-1 flex flex-col">
                   {/* Title */}
-                  <h3 className="text-lg font-bold text-[#DA2C32] mb-2">
+                  <h3 className="text-lg font-bold text-[#16A34A]">
                     {item.name}
                   </h3>
 
@@ -513,10 +531,11 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
                   </div>
 
                   {/* Edit Button */}
-                  <button 
+                  <button
                     onClick={() => setEditingItem(item)}
-                    className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold py-2.5 rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-md hover:shadow-lg">
-                    แก้ไขพันธุ์อ้อย
+                    className="bg-[#16A34A] hover:bg-[#15803D] text-white font-semibold py-2.5 rounded-lg shadow-md hover:shadow-lg transition"
+                  >
+                    แก้ไข
                   </button>
                 </div>
               </div>
@@ -524,647 +543,46 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
           </div>
 
           {/* Modal Overlay and Panel */}
-          {showAddPanel && (
+          {(showAddPanel || !!editingItem) && (
             <div 
               className="fixed inset-0 bg-black/20 z-40" 
-              onClick={closeAddPanel}
+              onClick={showAddPanel ? closeAddPanel : closeEditPanel}
             />
           )}
-          <div
-            className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 bg-white rounded-lg shadow-2xl z-50 transition-all duration-300 ${
-              showAddPanel ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
-            }`}
-          >
-              <div className="max-h-[90vh] overflow-auto p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">เพิ่มพันธุ์อ้อยใหม่</h3>
-                <button
-                  onClick={closeAddPanel}
-                  className="text-gray-400 hover:text-red-500 text-2xl leading-none"
-                  aria-label="ปิด"
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-gray-600 mb-2">รูปภาพพันธุ์อ้อย</label>
-                  <div className="h-28 border-2 border-dashed rounded-md flex items-center justify-center text-gray-400 relative overflow-hidden">
-                    {selectedImagePreview ? (
-                      <img src={selectedImagePreview} alt="preview" className="w-full h-full object-cover" />
-                    ) : formData.variety_image ? (
-                      <img src={`${API_BASE_URL}/images/variety/${formData.variety_image}`} alt="existing" className="w-full h-full object-cover" />
-                    ) : (
-                      <label className="flex items-center justify-center w-full h-full cursor-pointer">
-                        <span>คลิกเพื่ออัปโหลดรูปภาพ</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files && e.target.files[0] ? e.target.files[0] : null
-                            setSelectedImageFile(file)
-                          }}
-                        />
-                      </label>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">ชื่อพันธุ์อ้อย *</label>
-                  <input 
-                    className="w-full border rounded-md px-3 py-2" 
-                    placeholder="เช่น เค 88-92" 
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">คำอธิบาย</label>
-                  <textarea
-                    className="w-full border rounded-md px-3 py-2 h-20"
-                    placeholder="คำอธิบายสั้น ๆ หรือรายละเอียดของพันธุ์อ้อย"
-                    value={formData.description || ''}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">ดินที่เหมาะสม *</label>
-                  <input 
-                    className="w-full border rounded-md px-3 py-2" 
-                    placeholder="เช่น ดินร่วนเหนียว" 
-                    value={formData.soil_type}
-                    onChange={(e) => setFormData({ ...formData, soil_type: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">พันธุ์แม่พ่อ</label>
-                  <input 
-                    className="w-full border rounded-md px-3 py-2" 
-                    placeholder="เช่น F143 (แม่) X ROC1 (พ่อ)"
-                    value={formData.parent_varieties || ''}
-                    onChange={(e) => setFormData({ ...formData, parent_varieties: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">ผลผลิต (ตัน/ไร่) *</label>
-                  <input 
-                    className="w-full border rounded-md px-3 py-2" 
-                    placeholder="เช่น 15-16"
-                    value={formData.yield}
-                    onChange={(e) => setFormData({ ...formData, yield: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">อายุ (เดือน) *</label>
-                  <input 
-                    className="w-full border rounded-md px-3 py-2" 
-                    placeholder="เช่น 11-12"
-                    value={formData.age}
-                    onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">ความหวาน (Brix) *</label>
-                  <input 
-                    className="w-full border rounded-md px-3 py-2" 
-                    placeholder="เช่น 10-12"
-                    value={formData.sweetness}
-                    onChange={(e) => setFormData({ ...formData, sweetness: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">แมลง</label>
-                  <div className="space-y-2">
-                    {(formData.pest || []).map((item, idx) => (
-                      <div key={idx} className="flex gap-2">
-                        <input 
-                          className="flex-1 border rounded-md px-3 py-2"
-                          value={item}
-                          onChange={(e) => {
-                            const updated = [...(formData.pest || [])]
-                            updated[idx] = e.target.value
-                            setFormData({ ...formData, pest: updated })
-                          }}
-                        />
-                        <button
-                          onClick={() => {
-                            const updated = (formData.pest || []).filter((_, i) => i !== idx)
-                            setFormData({ ...formData, pest: updated })
-                          }}
-                          className="px-2 py-2 text-red-600 hover:bg-red-50 rounded-md"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      onClick={() => setFormData({ ...formData, pest: [...(formData.pest || []), ''] })}
-                      className="w-full border-2 border-dashed border-gray-300 rounded-md px-3 py-2 text-gray-600 hover:bg-gray-50"
-                    >
-                      + เพิ่มแมลง
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">โรค</label>
-                  <div className="space-y-2">
-                    {(formData.disease || []).map((item, idx) => (
-                      <div key={idx} className="flex gap-2">
-                        <input 
-                          className="flex-1 border rounded-md px-3 py-2"
-                          value={item}
-                          onChange={(e) => {
-                            const updated = [...(formData.disease || [])]
-                            updated[idx] = e.target.value
-                            setFormData({ ...formData, disease: updated })
-                          }}
-                        />
-                        <button
-                          onClick={() => {
-                            const updated = (formData.disease || []).filter((_, i) => i !== idx)
-                            setFormData({ ...formData, disease: updated })
-                          }}
-                          className="px-2 py-2 text-red-600 hover:bg-red-50 rounded-md"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      onClick={() => setFormData({ ...formData, disease: [...(formData.disease || []), ''] })}
-                      className="w-full border-2 border-dashed border-gray-300 rounded-md px-3 py-2 text-gray-600 hover:bg-gray-50"
-                    >
-                      + เพิ่มโรค
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">ลักษณะการเจริญเติบโต</label>
-                  <div className="space-y-2">
-                    {(formData.growth_characteristics || []).map((item, idx) => (
-                      <div key={idx} className="flex gap-2">
-                        <input 
-                          className="flex-1 border rounded-md px-3 py-2"
-                          value={item}
-                          onChange={(e) => {
-                            const updated = [...(formData.growth_characteristics || [])]
-                            updated[idx] = e.target.value
-                            setFormData({ ...formData, growth_characteristics: updated })
-                          }}
-                        />
-                        <button
-                          onClick={() => {
-                            const updated = (formData.growth_characteristics || []).filter((_, i) => i !== idx)
-                            setFormData({ ...formData, growth_characteristics: updated })
-                          }}
-                          className="px-2 py-2 text-red-600 hover:bg-red-50 rounded-md"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      onClick={() => setFormData({ ...formData, growth_characteristics: [...(formData.growth_characteristics || []), ''] })}
-                      className="w-full border-2 border-dashed border-gray-300 rounded-md px-3 py-2 text-gray-600 hover:bg-gray-50"
-                    >
-                      + เพิ่มลักษณะการเจริญเติบโต
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">เคล็ดลับการปลูก</label>
-                  <div className="space-y-2">
-                    {(formData.planting_tips || []).map((item, idx) => (
-                      <div key={idx} className="flex gap-2">
-                        <input 
-                          className="flex-1 border rounded-md px-3 py-2"
-                          value={item}
-                          onChange={(e) => {
-                            const updated = [...(formData.planting_tips || [])]
-                            updated[idx] = e.target.value
-                            setFormData({ ...formData, planting_tips: updated })
-                          }}
-                        />
-                        <button
-                          onClick={() => {
-                            const updated = (formData.planting_tips || []).filter((_, i) => i !== idx)
-                            setFormData({ ...formData, planting_tips: updated })
-                          }}
-                          className="px-2 py-2 text-red-600 hover:bg-red-50 rounded-md"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      onClick={() => setFormData({ ...formData, planting_tips: [...(formData.planting_tips || []), ''] })}
-                      className="w-full border-2 border-dashed border-gray-300 rounded-md px-3 py-2 text-gray-600 hover:bg-gray-50"
-                    >
-                      + เพิ่มเคล็ดลับการปลูก
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">เหมาะสำหรับพื้นที่</label>
-                  <div className="space-y-2">
-                    {(formData.suitable_for || []).map((item, idx) => (
-                      <div key={idx} className="flex gap-2">
-                        <input 
-                          className="flex-1 border rounded-md px-3 py-2"
-                          value={item}
-                          onChange={(e) => {
-                            const updated = [...(formData.suitable_for || [])]
-                            updated[idx] = e.target.value
-                            setFormData({ ...formData, suitable_for: updated })
-                          }}
-                        />
-                        <button
-                          onClick={() => {
-                            const updated = (formData.suitable_for || []).filter((_, i) => i !== idx)
-                            setFormData({ ...formData, suitable_for: updated })
-                          }}
-                          className="px-2 py-2 text-red-600 hover:bg-red-50 rounded-md"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      onClick={() => setFormData({ ...formData, suitable_for: [...(formData.suitable_for || []), ''] })}
-                      className="w-full border-2 border-dashed border-gray-300 rounded-md px-3 py-2 text-gray-600 hover:bg-gray-50"
-                    >
-                      + เพิ่มพื้นที่เหมาะสม
-                    </button>
-                  </div>
-                </div>
-
-                <div className="pt-4">
+          {/* Delete Confirmation Modal */}
+          {deleteModal.show && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/40" onClick={() => setDeleteModal({ show: false })} />
+              <div className="relative bg-white rounded-xl shadow-2xl p-8 w-full max-w-sm mx-auto flex flex-col items-center animate-in fade-in duration-200">
+                <svg className="w-12 h-12 text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <h2 className="text-xl font-bold text-gray-900 mb-2">ยืนยันการลบพันธุ์อ้อย</h2>
+                <p className="text-gray-600 mb-6 text-center">คุณแน่ใจหรือไม่ว่าต้องการลบพันธุ์อ้อยนี้? การลบนี้ไม่สามารถย้อนกลับได้</p>
+                <div className="flex gap-4 w-full">
                   <button
-                    onClick={handleAddSubmit}
-                    className="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition"
-                  >
-                    เพิ่มพันธุ์อ้อย
-                  </button>
+                    className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 rounded-lg transition"
+                    onClick={() => setDeleteModal({ show: false })}
+                  >ยกเลิก</button>
+                  <button
+                    className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 rounded-lg transition"
+                    onClick={() => handleDeleteItem(deleteModal.itemId)}
+                  >ลบ</button>
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Edit Modal Overlay and Panel */}
-          {editingItem && (
-            <div 
-              className="fixed inset-0 bg-black/20 z-40" 
-              onClick={closeEditPanel}
-            />
           )}
-          <div
-            className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 bg-white rounded-lg shadow-2xl z-50 transition-all duration-300 ${
-              editingItem ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
-            }`}
-          >
-            <div className="max-h-[90vh] overflow-auto p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">แก้ไขพันธุ์อ้อย</h3>
-                <button
-                  onClick={closeEditPanel}
-                  className="text-gray-400 hover:text-red-500 text-2xl leading-none"
-                  aria-label="ปิด"
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-gray-600 mb-2">รูปภาพพันธุ์อ้อย</label>
-                  <div className="h-28 border-2 border-dashed rounded-md flex items-center justify-center text-gray-400 relative overflow-hidden bg-gray-50">
-                    {/* show new preview if selected, else old image as background with overlay, else placeholder */}
-                    {editingImagePreview ? (
-                      <img src={editingImagePreview} alt="preview" className="w-full h-full object-cover" />
-                    ) : (
-                      <>
-                        {/* show old image as background */}
-                        {editingItem?.variety_image && (
-                          <img src={`${API_BASE_URL}/images/variety/${editingItem.variety_image}`} alt="existing" className="absolute inset-0 w-full h-full object-cover" />
-                        )}
-                        {/* overlay with text */}
-                        <label className="relative z-10 flex flex-col items-center justify-center gap-2 cursor-pointer">
-                          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          <span className="text-center text-sm text-gray-500 font-medium">คลิกเพื่ออัปโหลดรูปภาพ</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files && e.target.files[0] ? e.target.files[0] : null
-                              setEditingImageFile(file)
-                            }}
-                          />
-                        </label>
-                      </>
-                    )}
-
-                    {/* invisible overlay input so clicking anywhere opens file chooser */}
-                    <label aria-label="อัปโหลดรูปภาพ" className="absolute inset-0 cursor-pointer z-5">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files && e.target.files[0] ? e.target.files[0] : null
-                          setEditingImageFile(file)
-                        }}
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">ชื่อพันธุ์อ้อย *</label>
-                  <input 
-                    className="w-full border rounded-md px-3 py-2" 
-                    value={editingItem?.name || ''}
-                    onChange={(e) => setEditingItem(editingItem ? { ...editingItem, name: e.target.value } : null)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">คำอธิบาย</label>
-                  <textarea
-                    className="w-full border rounded-md px-3 py-2 h-20"
-                    placeholder="คำอธิบายสั้น ๆ หรือรายละเอียดของพันธุ์อ้อย"
-                    value={editingItem?.description || ''}
-                    onChange={(e) => setEditingItem(editingItem ? { ...editingItem, description: e.target.value } : null)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">ดินที่เหมาะสม *</label>
-                  <input 
-                    className="w-full border rounded-md px-3 py-2" 
-                    value={editingItem?.soil_type || ''}
-                    onChange={(e) => setEditingItem(editingItem ? { ...editingItem, soil_type: e.target.value } : null)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">พันธุ์แม่พ่อ</label>
-                  <input 
-                    className="w-full border rounded-md px-3 py-2" 
-                    value={editingItem?.parent_varieties || ''}
-                    onChange={(e) => setEditingItem(editingItem ? { ...editingItem, parent_varieties: e.target.value } : null)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">ผลผลิต (ตัน/ไร่) *</label>
-                  <input 
-                    className="w-full border rounded-md px-3 py-2" 
-                    value={editingItem?.yield || ''}
-                    onChange={(e) => setEditingItem(editingItem ? { ...editingItem, yield: e.target.value } : null)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">อายุ (เดือน) *</label>
-                  <input 
-                    className="w-full border rounded-md px-3 py-2" 
-                    value={editingItem?.age || ''}
-                    onChange={(e) => setEditingItem(editingItem ? { ...editingItem, age: e.target.value } : null)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">ความหวาน (Brix) *</label>
-                  <input 
-                    className="w-full border rounded-md px-3 py-2" 
-                    value={editingItem?.sweetness || ''}
-                    onChange={(e) => setEditingItem(editingItem ? { ...editingItem, sweetness: e.target.value } : null)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">แมลง</label>
-                  <div className="space-y-2">
-                    {(editingItem?.pest || []).map((item, idx) => (
-                      <div key={idx} className="flex gap-2">
-                        <input 
-                          className="flex-1 border rounded-md px-3 py-2"
-                          value={item}
-                          onChange={(e) => {
-                            if (!editingItem) return
-                            const updated = [...(editingItem.pest || [])]
-                            updated[idx] = e.target.value
-                            setEditingItem({ ...editingItem, pest: updated })
-                          }}
-                        />
-                        <button
-                          onClick={() => {
-                            if (!editingItem) return
-                            const updated = (editingItem.pest || []).filter((_, i) => i !== idx)
-                            setEditingItem({ ...editingItem, pest: updated })
-                          }}
-                          className="px-2 py-2 text-red-600 hover:bg-red-50 rounded-md"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      onClick={() => {
-                        if (!editingItem) return
-                        setEditingItem({ ...editingItem, pest: [...(editingItem.pest || []), ''] })
-                      }}
-                      className="w-full border-2 border-dashed border-gray-300 rounded-md px-3 py-2 text-gray-600 hover:bg-gray-50"
-                    >
-                      + เพิ่มแมลง
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">โรค</label>
-                  <div className="space-y-2">
-                    {(editingItem?.disease || []).map((item, idx) => (
-                      <div key={idx} className="flex gap-2">
-                        <input 
-                          className="flex-1 border rounded-md px-3 py-2"
-                          value={item}
-                          onChange={(e) => {
-                            if (!editingItem) return
-                            const updated = [...(editingItem.disease || [])]
-                            updated[idx] = e.target.value
-                            setEditingItem({ ...editingItem, disease: updated })
-                          }}
-                        />
-                        <button
-                          onClick={() => {
-                            if (!editingItem) return
-                            const updated = (editingItem.disease || []).filter((_, i) => i !== idx)
-                            setEditingItem({ ...editingItem, disease: updated })
-                          }}
-                          className="px-2 py-2 text-red-600 hover:bg-red-50 rounded-md"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      onClick={() => {
-                        if (!editingItem) return
-                        setEditingItem({ ...editingItem, disease: [...(editingItem.disease || []), ''] })
-                      }}
-                      className="w-full border-2 border-dashed border-gray-300 rounded-md px-3 py-2 text-gray-600 hover:bg-gray-50"
-                    >
-                      + เพิ่มโรค
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">ลักษณะการเจริญเติบโต</label>
-                  <div className="space-y-2">
-                    {(editingItem?.growth_characteristics || []).map((item, idx) => (
-                      <div key={idx} className="flex gap-2">
-                        <input 
-                          className="flex-1 border rounded-md px-3 py-2"
-                          value={item}
-                          onChange={(e) => {
-                            if (!editingItem) return
-                            const updated = [...(editingItem.growth_characteristics || [])]
-                            updated[idx] = e.target.value
-                            setEditingItem({ ...editingItem, growth_characteristics: updated })
-                          }}
-                        />
-                        <button
-                          onClick={() => {
-                            if (!editingItem) return
-                            const updated = (editingItem.growth_characteristics || []).filter((_, i) => i !== idx)
-                            setEditingItem({ ...editingItem, growth_characteristics: updated })
-                          }}
-                          className="px-2 py-2 text-red-600 hover:bg-red-50 rounded-md"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      onClick={() => {
-                        if (!editingItem) return
-                        setEditingItem({ ...editingItem, growth_characteristics: [...(editingItem.growth_characteristics || []), ''] })
-                      }}
-                      className="w-full border-2 border-dashed border-gray-300 rounded-md px-3 py-2 text-gray-600 hover:bg-gray-50"
-                    >
-                      + เพิ่มลักษณะการเจริญเติบโต
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">เคล็ดลับการปลูก</label>
-                  <div className="space-y-2">
-                    {(editingItem?.planting_tips || []).map((item, idx) => (
-                      <div key={idx} className="flex gap-2">
-                        <input 
-                          className="flex-1 border rounded-md px-3 py-2"
-                          value={item}
-                          onChange={(e) => {
-                            if (!editingItem) return
-                            const updated = [...(editingItem.planting_tips || [])]
-                            updated[idx] = e.target.value
-                            setEditingItem({ ...editingItem, planting_tips: updated })
-                          }}
-                        />
-                        <button
-                          onClick={() => {
-                            if (!editingItem) return
-                            const updated = (editingItem.planting_tips || []).filter((_, i) => i !== idx)
-                            setEditingItem({ ...editingItem, planting_tips: updated })
-                          }}
-                          className="px-2 py-2 text-red-600 hover:bg-red-50 rounded-md"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      onClick={() => {
-                        if (!editingItem) return
-                        setEditingItem({ ...editingItem, planting_tips: [...(editingItem.planting_tips || []), ''] })
-                      }}
-                      className="w-full border-2 border-dashed border-gray-300 rounded-md px-3 py-2 text-gray-600 hover:bg-gray-50"
-                    >
-                      + เพิ่มเคล็ดลับการปลูก
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">เหมาะสำหรับพื้นที่</label>
-                  <div className="space-y-2">
-                    {(editingItem?.suitable_for || []).map((item, idx) => (
-                      <div key={idx} className="flex gap-2">
-                        <input 
-                          className="flex-1 border rounded-md px-3 py-2"
-                          value={item}
-                          onChange={(e) => {
-                            if (!editingItem) return
-                            const updated = [...(editingItem.suitable_for || [])]
-                            updated[idx] = e.target.value
-                            setEditingItem({ ...editingItem, suitable_for: updated })
-                          }}
-                        />
-                        <button
-                          onClick={() => {
-                            if (!editingItem) return
-                            const updated = (editingItem.suitable_for || []).filter((_, i) => i !== idx)
-                            setEditingItem({ ...editingItem, suitable_for: updated })
-                          }}
-                          className="px-2 py-2 text-red-600 hover:bg-red-50 rounded-md"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      onClick={() => {
-                        if (!editingItem) return
-                        setEditingItem({ ...editingItem, suitable_for: [...(editingItem.suitable_for || []), ''] })
-                      }}
-                      className="w-full border-2 border-dashed border-gray-300 rounded-md px-3 py-2 text-gray-600 hover:bg-gray-50"
-                    >
-                      + เพิ่มพื้นที่เหมาะสม
-                    </button>
-                  </div>
-                </div>
-
-                <div className="pt-4">
-                  <button
-                    onClick={handleEditSubmit}
-                    className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition"
-                  >
-                    บันทึกการเปลี่ยนแปลง
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <VarietyModal
+            mode={showAddPanel ? 'add' : 'edit'}
+            isOpen={showAddPanel || !!editingItem}
+            onClose={showAddPanel ? closeAddPanel : closeEditPanel}
+            formData={showAddPanel ? formData : editingItem || formData}
+            setFormData={showAddPanel ? setFormData : editingItem ? (d) => setEditingItem({ ...editingItem, ...d }) : setFormData}
+            selectedImagePreview={showAddPanel ? selectedImagePreview : editingImagePreview}
+            selectedImageFile={showAddPanel ? selectedImageFile : editingImageFile}
+            setSelectedImageFile={showAddPanel ? setSelectedImageFile : setEditingImageFile}
+            onSubmit={showAddPanel ? handleAddSubmit : handleEditSubmit}
+          />
 
           {/* Toast Notification - Top Right */}
           {toast.show && (

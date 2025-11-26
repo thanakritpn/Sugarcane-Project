@@ -68,7 +68,7 @@ function VarietyDetail() {
                             <FaArrowLeft size={18} />
                             <span className="font-semibold">กลับหน้าหลัก</span>
                         </button>
-                        <div className="flex flex-col items-center justify-center gap-3 text-center">
+                        <div className="flex items-center justify-center gap-3">
                             <FaSeedling className="text-3xl md:text-4xl" />
                             <h1 className="text-3xl md:text-5xl font-bold">รายละเอียดพันธุ์อ้อย</h1>
                         </div>
