@@ -168,48 +168,6 @@ const VarietyModal: React.FC<VarietyModalProps> = ({
             </p>
           </div>
 
-          {/* คำอธิบาย */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-800">
-              คำอธิบาย
-            </label>
-
-            <textarea
-              className="w-full border rounded-md px-3 py-2 mt-1 h-20 text-gray-900 
-                         focus:ring-2 focus:ring-[#15803D] outline-none"
-              placeholder="คำอธิบายพันธุ์อ้อย"
-              value={formData.description || ''}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-            />
-
-            <p className="text-xs text-gray-500 mt-1">
-              ระบุรายละเอียดเพิ่มเติม เช่น จุดเด่น ความเหมาะสม และข้อมูลสำคัญของพันธุ์อ้อย
-            </p>
-          </div>
-
-          {/* ดินที่เหมาะสม */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-800">
-              ดินที่เหมาะสม <span className="text-red-500">*</span>
-            </label>
-
-            <input
-              className="w-full border rounded-md px-3 py-2 mt-1 text-gray-900 
-                         focus:ring-2 focus:ring-[#15803D] outline-none"
-              placeholder="เช่น ดินร่วนเหนียว"
-              value={formData.soil_type || ''}
-              onChange={(e) =>
-                setFormData({ ...formData, soil_type: e.target.value })
-              }
-            />
-
-            <p className="text-xs text-gray-500 mt-1">
-              ระบุชนิดของดินที่เหมาะกับการปลูกพันธุ์อ้อยนี้
-            </p>
-          </div>
-
           {/* พันธุ์แม่พ่อ */}
           <div>
             <label className="block text-sm font-semibold text-gray-800">
@@ -228,6 +186,54 @@ const VarietyModal: React.FC<VarietyModalProps> = ({
 
             <p className="text-xs text-gray-500 mt-1">
               หากทราบสายพันธุ์แม่และพ่อ สามารถระบุเพื่อความครบถ้วนของข้อมูล
+            </p>
+          </div>
+
+          {/* ดินที่เหมาะสม */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-800">
+              ดินที่เหมาะสม <span className="text-red-500">*</span>
+            </label>
+
+            <select
+              className="w-full border rounded-md px-3 py-2 mt-1 text-gray-900 
+                         focus:ring-2 focus:ring-[#15803D] outline-none"
+              value={formData.soil_type || ''}
+              onChange={(e) =>
+                setFormData({ ...formData, soil_type: e.target.value })
+              }
+            >
+              <option value="">-- เลือกชนิดดิน --</option>
+              <option value="ดินเหนียว">ดินเหนียว</option>
+              <option value="ดินร่วนเหนียว">ดินร่วนเหนียว</option>
+              <option value="ดินร่วน">ดินร่วน</option>
+              <option value="ดินร่วนทราย">ดินร่วนทราย</option>
+              <option value="ดินทราย">ดินทราย</option>
+            </select>
+
+            <p className="text-xs text-gray-500 mt-1">
+              เลือกชนิดของดินที่เหมาะกับการปลูกพันธุ์อ้อยนี้
+            </p>
+          </div>
+
+          {/* คำอธิบาย */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-800">
+              คำอธิบาย
+            </label>
+
+            <textarea
+              className="w-full border rounded-md px-3 py-2 mt-1 h-20 text-gray-900 
+                         focus:ring-2 focus:ring-[#15803D] outline-none"
+              placeholder="คำอธิบายพันธุ์อ้อย"
+              value={formData.description || ''}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+            />
+
+            <p className="text-xs text-gray-500 mt-1">
+              ระบุรายละเอียดเพิ่มเติม เช่น จุดเด่น ความเหมาะสม และข้อมูลสำคัญของพันธุ์อ้อย
             </p>
           </div>
 
