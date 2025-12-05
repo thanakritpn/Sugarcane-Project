@@ -931,8 +931,10 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
             return;
         }
 
-        if (password.length < 6) {
-            res.status(400).json({ error: 'Password must be at least 6 characters' });
+        // Validate password with stronger rules
+        const passwordValidation = validatePassword(password);
+        if (!passwordValidation.isValid) {
+            res.status(400).json({ error: passwordValidation.message });
             return;
         }
 
@@ -1157,6 +1159,34 @@ app.post('/api/shops', userUpload.single('shop_image'), async (req: Request, res
     }
 });
 
+// Password validation function
+const validatePassword = (password: string): { isValid: boolean; message?: string } => {
+    if (password.length < 8) {
+        return { isValid: false, message: 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร' };
+    }
+    if (!/[a-z]/.test(password)) {
+        return { isValid: false, message: 'รหัสผ่านต้องมีตัวอักษรพิมพ์เล็กอย่างน้อย 1 ตัว' };
+    }
+    if (!/[A-Z]/.test(password)) {
+        return { isValid: false, message: 'รหัสผ่านต้องมีตัวอักษรพิมพ์ใหญ่อย่างน้อย 1 ตัว' };
+    }
+    if (!/[0-9]/.test(password)) {
+        return { isValid: false, message: 'รหัสผ่านต้องมีตัวเลขอย่างน้อย 1 ตัว' };
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+        return { isValid: false, message: 'รหัสผ่านต้องมีอักขระพิเศษอย่างน้อย 1 ตัว (!@#$%^&* เป็นต้น)' };
+    }
+    return { isValid: true };
+};
+
+// Phone validation function
+const validatePhone = (phone: string): { isValid: boolean; message?: string } => {
+    if (!/^[0-9]{9,10}$/.test(phone)) {
+        return { isValid: false, message: 'หมายเลขโทรศัพท์ต้องเป็นตัวเลข 9-10 หลัก' };
+    }
+    return { isValid: true };
+};
+
 // API: Register new shop
 app.post('/api/shops/register', shopUpload.single('shop_image'), async (req: Request, res: Response) => {
     try {
@@ -1165,6 +1195,20 @@ app.post('/api/shops/register', shopUpload.single('shop_image'), async (req: Req
 
         if (!username || !email || !password || !shopName || !phone || !address || !district || !province) {
             res.status(400).json({ error: 'All fields are required' });
+            return;
+        }
+
+        // Validate password
+        const passwordValidation = validatePassword(password);
+        if (!passwordValidation.isValid) {
+            res.status(400).json({ error: passwordValidation.message });
+            return;
+        }
+
+        // Validate phone
+        const phoneValidation = validatePhone(phone);
+        if (!phoneValidation.isValid) {
+            res.status(400).json({ error: phoneValidation.message });
             return;
         }
 

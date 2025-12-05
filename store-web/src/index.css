@@ -1,0 +1,12 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+    themes: light --default, dark --prefersdark, cupcake;
+}
+
+* {
+  font-family: 'Sarabun', sans-serif;
+}
+
+html, body {
+  font-family: 'Sarabun', sans-serif;
+}

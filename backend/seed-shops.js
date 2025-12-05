@@ -21,6 +21,7 @@ const shopSchema = new mongoose.Schema({
     address: { type: String, required: true },
     district: { type: String, required: true },
     province: { type: String, required: true },
+    shop_image: { type: String, default: '' },
 }, { timestamps: true });
 
 // ShopInventory Schema
@@ -58,32 +59,35 @@ const shopsData = [
     {
         username: 'shop_chiangmai',
         email: 'shop.chiangmai@example.com',
-        password: bcrypt.hashSync('password123', 10),
+        password: bcrypt.hashSync('Password123!', 10),
         shopName: 'ร้านอ้อยเชียงใหม่',
-        phone: '053-123456',
+        phone: '0531234567',
         address: '123 ถนนท่าแพ ตำบลศรีภูมิ',
         district: 'เมืองเชียงใหม่',
         province: 'เชียงใหม่',
+        shop_image: 'shop-chiangmai.jpg',
     },
     {
         username: 'shop_khonkaen',
         email: 'shop.khonkaen@example.com',
-        password: bcrypt.hashSync('password456', 10),
+        password: bcrypt.hashSync('Password456@', 10),
         shopName: 'ร้านอ้อยขอนแก่น',
-        phone: '043-234567',
+        phone: '0432345678',
         address: '456 ถนนสีชัง ตำบลศรีมหา',
         district: 'เมืองขอนแก่น',
         province: 'ขอนแก่น',
+        shop_image: 'shop-khonkaen.jpg',
     },
     {
         username: 'shop_nakhon',
         email: 'shop.nakhon@example.com',
-        password: bcrypt.hashSync('password789', 10),
+        password: bcrypt.hashSync('Password789#', 10),
         shopName: 'ร้านอ้อยนครราชสีมา',
-        phone: '044-345678',
+        phone: '0443456789',
         address: '789 ถนนจังสมบัติ ตำบลหนองไข่',
         district: 'เมืองนครราชสีมา',
         province: 'นครราชสีมา',
+        shop_image: 'shop-nakhon.jpg',
     },
 ];
 
