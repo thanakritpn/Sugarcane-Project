@@ -34,7 +34,7 @@ export async function ensureAdminExists(): Promise<any> {
                 existingAdmin.username = ADMIN_CONFIG.username;
                 existingAdmin.email = ADMIN_CONFIG.email;
                 existingAdmin.password = hashedPassword;
-                existingAdmin.role = ADMIN_CONFIG.role;
+                existingAdmin.role = ADMIN_CONFIG.role as "Admin" | "User";
                 
                 await existingAdmin.save();
                 console.log('✅ Admin user updated on startup');
