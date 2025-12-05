@@ -5,6 +5,7 @@ import Header from "./components/Header";
 import ContentManager from "./ContentManager";
 import InventoryManager from "./pages/InventoryManager";
 import ShopManager from "./pages/ShopManager";
+import OrdersManager from "./pages/OrdersManager";
 import ToastContainer, { useToast } from "./components/ToastContainer";
 import ShopRegisterModal from "./components/ShopRegisterModal";
 
@@ -17,7 +18,7 @@ function App() {
     const saved = localStorage.getItem('shopData');
     return !!saved;
   });
-  const [shopData, setShopData] = useState<any>(() => {
+  const [_shopData, setShopData] = useState<any>(() => {
     const saved = localStorage.getItem('shopData');
     return saved ? JSON.parse(saved) : null;
   });
@@ -254,7 +255,8 @@ function App() {
           localStorage.removeItem('shopData');
           addToast('ออกจากระบบเรียบร้อยแล้ว', 'success');
         }} />} />
-        <Route path="/users" element={<InventoryManager />} />
+        <Route path="/users" element={<InventoryManager searchQuery={searchQuery} />} />
+        <Route path="/orders" element={<OrdersManager />} />
         <Route path="/content" element={<ContentManager onLogout={() => {
           setIsLoggedIn(false);
           setShopData(null);

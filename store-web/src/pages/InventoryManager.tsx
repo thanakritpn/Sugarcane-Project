@@ -40,12 +40,11 @@ interface ShopInventory {
 
 const API_BASE_URL = 'http://localhost:5001';
 
-export default function InventoryManager() {
+export default function InventoryManager({ searchQuery = "" }: { searchQuery?: string }) {
   const [shopInventories, setShopInventories] = useState<ShopInventory[]>([]);
   const [currentShopInventory, setCurrentShopInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
   const { toasts, addToast, removeToast } = useToast();
   
   // Modal states
@@ -301,8 +300,10 @@ export default function InventoryManager() {
 
   // Filter shop inventories based on search query
   const filteredInventories = currentShopInventory.filter(item =>
-    item.variety.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (item.variety.description?.toLowerCase().includes(searchQuery.toLowerCase()) || false)
+    item.variety && item.variety.name && (
+      item.variety.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.variety.description?.toLowerCase().includes(searchQuery.toLowerCase()) || false)
+    )
   );
 
   const totalInventoryItems = currentShopInventory.length;
@@ -398,6 +399,11 @@ export default function InventoryManager() {
         {!loading && !error && filteredInventories.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredInventories.map((item) => {
+              // Safety check: skip items without variety data
+              if (!item.variety || !item.variety.name) {
+                return null;
+              }
+              
               const statusInfo = getStatusInfo(item.status);
               const StatusIcon = statusInfo.icon;
               
@@ -480,7 +486,7 @@ export default function InventoryManager() {
       </div>
       
       {/* Modal สำหรับจัดการสินค้า */}
-      {showModal && selectedItem && (
+      {showModal && selectedItem && selectedItem.variety && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-hidden shadow-2xl">
             {/* Modal Header */}
@@ -491,7 +497,7 @@ export default function InventoryManager() {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-gray-900">จัดการสินค้า</h3>
-                  <p className="text-sm text-gray-600">{selectedItem.variety.name}</p>
+                  <p className="text-sm text-gray-600">{selectedItem.variety?.name || 'ไม่ระบุ'}</p>
                 </div>
               </div>
               <button

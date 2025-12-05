@@ -1797,6 +1797,38 @@ app.delete('/api/cart-clear/:userId', async (req: Request, res: Response) => {
     }
 });
 
+// API: Get all paid orders for a shop
+app.get('/api/cart/orders/:shopId', async (req: Request, res: Response) => {
+    try {
+        const { shopId } = req.params;
+
+        if (!shopId) {
+            res.status(400).json({ error: 'shopId is required' });
+            return;
+        }
+
+        const paidOrders = await Cart.find({ 
+            shopId: shopId, 
+            status: 'paid' 
+        })
+        .populate('varietyId')
+        .populate('userId', 'username email phone')
+        .sort({ updatedAt: -1 })
+        .lean();
+
+        res.json({
+            message: 'Paid orders retrieved successfully',
+            data: paidOrders
+        });
+    } catch (err: any) {
+        console.error('Get paid orders error:', err);
+        res.status(500).json({ 
+            error: 'Failed to fetch paid orders',
+            details: err.message 
+        });
+    }
+});
+
 // Start server
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
@@ -1825,7 +1857,7 @@ app.listen(PORT, () => {
     console.log(`   GET    /api/shop-inventory/variety/:varietyId - Find shops selling variety`);
     console.log(`   POST   /api/cart               - Add item to cart`);
     console.log(`   GET    /api/cart/:userId       - Get user's cart`);
-    console.log(`   GET    /api/cart/all-paid      - Get all paid cart items (orders)`);
+    console.log(`   GET    /api/cart/orders/:shopId - Get paid orders for shop`);
     console.log(`   PUT    /api/cart/:cartId       - Update cart item`);
     console.log(`   DELETE /api/cart/:cartId       - Remove item from cart`);
     console.log(`   DELETE /api/cart-clear/:userId - Clear user's cart`);
