@@ -1,4 +1,12 @@
 ﻿@import "tailwindcss";
 @plugin "daisyui";
 
+* {
+  font-family: 'Sarabun', sans-serif;
+}
+
+html, body {
+  font-family: 'Sarabun', sans-serif;
+}
+
 

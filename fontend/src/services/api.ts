@@ -27,14 +27,25 @@ export const getVarietyById = async (id: string): Promise<Variety> => {
 
 // Search varieties with filters
 export const searchVarieties = async (filters: {
-    soil_type?: string;
-    pest?: string;
-    disease?: string;
+    soil_type?: string | string[];
+    pest?: string | string[];
+    disease?: string | string[];
+    name?: string;
 }): Promise<Variety[]> => {
     const params = new URLSearchParams();
-    if (filters.soil_type) params.append('soil_type', filters.soil_type);
-    if (filters.pest) params.append('pest', filters.pest);
-    if (filters.disease) params.append('disease', filters.disease);
+    if (filters.soil_type) {
+        const soilTypes = Array.isArray(filters.soil_type) ? filters.soil_type : [filters.soil_type];
+        soilTypes.forEach(st => params.append('soil_type', st));
+    }
+    if (filters.pest) {
+        const pests = Array.isArray(filters.pest) ? filters.pest : [filters.pest];
+        pests.forEach(p => params.append('pest', p));
+    }
+    if (filters.disease) {
+        const diseases = Array.isArray(filters.disease) ? filters.disease : [filters.disease];
+        diseases.forEach(d => params.append('disease', d));
+    }
+    if (filters.name) params.append('name', filters.name);
 
     const url = `/varieties/search?${params.toString()}`;
     console.log('🌐 API Request URL:', url);
@@ -90,6 +101,98 @@ export const removeFavorite = async (userId: string, varietyId: string): Promise
 // Seed initial data
 export const seedData = async (): Promise<void> => {
     await api.post('/seed');
+};
+
+// ==================== SHOP APIs ====================
+
+export interface ShopInventoryItem {
+    _id: string;
+    shopId: {
+        _id: string;
+        username: string;
+        email: string;
+        shopName: string;
+        phone: string;
+        address: string;
+        district: string;
+        province: string;
+    };
+    varietyId: string;
+    price: number;
+    status: 'available' | 'out_of_stock';
+    quantity?: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+// Get all shops selling a specific variety
+export const getShopsSellingVariety = async (varietyId: string): Promise<ShopInventoryItem[]> => {
+    const response = await api.get<ShopInventoryItem[]>(`/shop-inventory/variety/${varietyId}`);
+    return response.data;
+};
+
+// ==================== CART APIs ====================
+
+export interface CartItem {
+    _id: string;
+    userId: string;
+    shopId: {
+        _id: string;
+        username: string;
+        email: string;
+        shopName: string;
+        phone: string;
+        address: string;
+        district: string;
+        province: string;
+    };
+    varietyId: {
+        _id: string;
+        name: string;
+        variety_image: string;
+    };
+    price: number;
+    quantity: number;
+    status: 'pending' | 'paid' | 'cancelled';
+    createdAt: string;
+    updatedAt: string;
+}
+
+// Add item to cart
+export const addToCart = async (userId: string, shopId: string, varietyId: string, price: number, quantity: number = 1): Promise<CartItem> => {
+    const response = await api.post<{ message: string; data: CartItem }>('/cart', {
+        userId,
+        shopId,
+        varietyId,
+        price,
+        quantity
+    });
+    return response.data.data;
+};
+
+// Get user's cart
+export const getUserCart = async (userId: string): Promise<CartItem[]> => {
+    const response = await api.get<{ message: string; data: CartItem[] }>(`/cart/${userId}`);
+    return response.data.data;
+};
+
+// Update cart item
+export const updateCartItem = async (cartId: string, quantity?: number, status?: string): Promise<CartItem> => {
+    const response = await api.put<{ message: string; data: CartItem }>(`/cart/${cartId}`, {
+        quantity,
+        status
+    });
+    return response.data.data;
+};
+
+// Remove item from cart
+export const removeFromCart = async (cartId: string): Promise<void> => {
+    await api.delete(`/cart/${cartId}`);
+};
+
+// Clear user's entire cart
+export const clearCart = async (userId: string): Promise<void> => {
+    await api.delete(`/cart-clear/${userId}`);
 };
 
 export default api;

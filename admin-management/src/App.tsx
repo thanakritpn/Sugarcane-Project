@@ -75,7 +75,7 @@ function App() {
 
             <button
               type="submit"
-              className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white py-2 rounded-md transition font-semibold text-gray-900"
+              className="w-full bg-[#1D724A] hover:bg-[#155838] text-white py-2 rounded-md transition font-semibold text-gray-900"
             >
               เข้าสู่ระบบ
             </button>

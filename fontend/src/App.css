@@ -1,0 +1,33 @@
+@keyframes rainbow-border {
+    0% {
+        background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3);
+        background-size: 400% 400%;
+        background-position: 0% 50%;
+    }
+    50% {
+        background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3);
+        background-size: 400% 400%;
+        background-position: 100% 50%;
+    }
+    100% {
+        background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3);
+        background-size: 400% 400%;
+        background-position: 0% 50%;
+    }
+}
+
+
+.rainbow-border-animation {
+    position: relative;
+    border-radius: 9999px;
+    padding: 4px;
+    background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3);
+    background-size: 400% 400%;
+    animation: rainbow-border 8s linear infinite;
+}
+
+.rainbow-border-animation > div {
+    background: white;
+    border-radius: 9999px;
+}
+

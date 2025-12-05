@@ -2,14 +2,19 @@
 import { useAppSelector } from '../store/hooks';
 import { useState, useEffect } from 'react';
 import { FaArrowLeft, FaSeedling, FaBug, FaLeaf, FaChartLine, FaHeart, FaRegHeart } from 'react-icons/fa';
+import { GiShop } from 'react-icons/gi';
 import LoginModal from '../components/LoginModal';
+import CartModal from '../components/CartModal';
 import FloatingBookIcon from '../components/FloatingBookIcon';
-import { addFavorite, removeFavorite, getUserFavorites } from '../services/api';
+import Header from "../components/Header";
+import ToastContainer, { useToast } from '../components/ToastContainer';
+import { addFavorite, removeFavorite, getUserFavorites, getShopsSellingVariety, ShopInventoryItem, addToCart, getUserCart } from '../services/api';
 
 function VarietyDetail() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { items, loading, error } = useAppSelector((state) => state.varieties);
+    const { toasts, addToast, removeToast } = useToast();
     
     const variety = items.find((item) => item._id === id);
 
@@ -33,10 +38,26 @@ function VarietyDetail() {
     const [showLoginModal, setShowLoginModal] = useState(false);
     const [pendingFavoriteId, setPendingFavoriteId] = useState<string | null>(null);
 
+    // Shops selling this variety
+    const [shops, setShops] = useState<ShopInventoryItem[]>([]);
+    const [shopsLoading, setShopsLoading] = useState(false);
+
+    // Cart handling
+    const [addingToCart, setAddingToCart] = useState<string | null>(null);
+    const [cartMessage, setCartMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+    const [showCartModal, setShowCartModal] = useState(false);
+    const [cartCount, setCartCount] = useState(0);
+
+    // Reset scroll to top when id changes
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [id]);
+
     // Load favorites when logged in
     useEffect(() => {
         if (isLoggedIn && userId) {
             loadFavorites();
+            loadCartCount();
         }
     }, [isLoggedIn, userId]);
 
@@ -48,6 +69,65 @@ function VarietyDetail() {
             setFavorites((favs || []).map((v) => v._id || ''));
         } catch (err) {
             console.error('Failed to load favorites:', err);
+        }
+    };
+
+    const loadCartCount = async () => {
+        try {
+            if (!userId) return;
+            const items = await getUserCart(userId);
+            // Only count pending items
+            const pendingItems = (items || []).filter(item => item.status === 'pending');
+            const count = pendingItems.reduce((sum, item) => sum + item.quantity, 0);
+            setCartCount(count);
+        } catch (err) {
+            console.error('Failed to load cart count:', err);
+        }
+    };
+
+    // Load shops selling this variety
+    useEffect(() => {
+        if (variety?._id) {
+            loadShops();
+        }
+    }, [variety?._id]);
+
+    const loadShops = async () => {
+        try {
+            if (!variety?._id) return;
+            setShopsLoading(true);
+            const shopsData = await getShopsSellingVariety(variety._id);
+            setShops(shopsData);
+        } catch (err) {
+            console.error('Failed to load shops:', err);
+            setShops([]);
+        } finally {
+            setShopsLoading(false);
+        }
+    };
+
+    const handleAddToCart = async (shopId: string, shopName: string, price: number) => {
+        // Check if user is logged in
+        if (!isLoggedIn || !userId) {
+            setPendingFavoriteId(variety?._id || null); // Use for redirect after login
+            setShowLoginModal(true);
+            return;
+        }
+
+        if (!variety?._id) {
+            addToast('ไม่พบข้อมูลพันธุ์อ้อย', 'error');
+            return;
+        }
+
+        try {
+            setAddingToCart(shopId);
+            await addToCart(userId, shopId, variety._id, price, 1);
+            addToast(`เพิ่ม ${variety.name} จากร้าน ${shopName} ลงรถเข็นสำเร็จ`, 'success');
+        } catch (err: any) {
+            console.error('Failed to add to cart:', err);
+            addToast('เกิดข้อผิดพลาดในการเพิ่มไปยังรถเข็น', 'error');
+        } finally {
+            setAddingToCart(null);
         }
     };
 
@@ -109,6 +189,53 @@ function VarietyDetail() {
         }
     };
 
+    const handleOpenCart = () => {
+        if (!isLoggedIn) {
+            setShowLoginModal(true);
+            return;
+        }
+        setShowCartModal(true);
+    };
+
+    const handleCloseCart = async () => {
+        setShowCartModal(false);
+        // Reload cart count when cart modal closes
+        if (userId) {
+            try {
+                const items = await getUserCart(userId);
+                // Only count pending items
+                const pendingItems = (items || []).filter(item => item.status === 'pending');
+                const count = pendingItems.reduce((sum, item) => sum + item.quantity, 0);
+                setCartCount(count);
+            } catch (err) {
+                console.error('Failed to reload cart count:', err);
+            }
+        }
+    };
+
+    // Scroll-to-top arrow visibility logic
+    const [showScrollArrow, setShowScrollArrow] = useState(false);
+
+    useEffect(() => {
+      const handleScroll = () => {
+        const isBottom =
+          window.innerHeight + window.scrollY >=
+          document.body.offsetHeight - 10;
+
+        setShowScrollArrow(isBottom);
+      };
+
+      window.addEventListener("scroll", handleScroll);
+      return () => window.removeEventListener("scroll", handleScroll);
+    }, []);
+
+    const scrollToTop = () => {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -156,30 +283,49 @@ function VarietyDetail() {
     return (
         <>
             <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-                {/* Header */}
-                <header className="bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 text-white py-6 shadow-2xl relative overflow-hidden">
-                    <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-30"></div>
-                    <div className="container mx-auto px-4 relative z-10">
-                        <button
-                            onClick={() => navigate('/')}
-                            className="flex items-center gap-2 text-white hover:text-green-100 transition-all mb-4 bg-white/20 backdrop-blur-sm px-5 py-2.5 rounded-xl hover:bg-white/30 border border-white/30 hover:border-white/50 shadow-lg transform hover:scale-105 duration-200"
-                        >
-                            <FaArrowLeft size={18} />
-                            <span className="font-semibold">กลับหน้าหลัก</span>
-                        </button>
-                        <div className="flex items-center justify-center gap-3">
-                            <FaSeedling className="text-3xl md:text-4xl" />
-                            <h1 className="text-3xl md:text-5xl font-bold">รายละเอียดพันธุ์อ้อย</h1>
-                        </div>
+                {/* Cart Message Notification */}
+                {cartMessage && (
+                    <div className={`fixed top-20 left-4 right-4 z-50 p-4 rounded-lg shadow-lg text-white ${
+                        cartMessage.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+                    }`}>
+                        {cartMessage.text}
                     </div>
-                </header>
+                )}
 
-                <div className="container mx-auto px-4 py-12 max-w-7xl">
+                <Header 
+                  isLoggedIn={isLoggedIn}
+                  onLoginClick={() => setShowLoginModal(true)}
+                  onCartClick={handleOpenCart}
+                  cartCount={cartCount}
+                  onLogoutClick={() => {
+                    localStorage.removeItem("user");
+                    setIsLoggedIn(false);
+                    setUserId(null);
+                    setCartCount(0);
+                    setShowCartModal(false);
+                  }}
+                  forceSolid
+                />
+
+                <div className="container mx-auto px-4 py-6 max-w-[1400px] mt-[96px]">
                     {/* Hero Card */}
                     <div className="bg-white rounded-3xl shadow-2xl overflow-hidden mb-8 transform hover:scale-[1.01] transition-transform duration-300">
                         <div className="grid grid-cols-1 lg:grid-cols-5 gap-0">
                             {/* Image Section - 2/5 */}
-                            <div className="lg:col-span-2 relative h-80 lg:h-auto bg-gradient-to-br from-gray-200 to-gray-300">
+                            <div className="lg:col-span-2 relative h-[420px] bg-gradient-to-br from-gray-200 to-gray-300">
+                                {/* Back button on detail hero */}
+                                <button
+                                    onClick={() => {
+                                        // Save current scroll position before navigating back
+                                        window.history.scrollRestoration = 'manual';
+                                        navigate(-1);
+                                    }}
+                                    aria-label="ย้อนกลับ"
+                                    className="absolute top-4 left-4 z-30 px-3 py-1.5 rounded-full bg-white/90 hover:bg-white text-gray-700 hover:text-[#1D724A] transition-shadow shadow-sm flex items-center gap-2 backdrop-blur"
+                                >
+                                    <FaArrowLeft className="text-sm" />
+                                    <span className="text-sm font-medium">กลับ</span>
+                                </button>
                                 {/* Favorite heart on detail hero */}
                                 <button
                                     onClick={() => toggleFavorite(variety._id)}
@@ -204,7 +350,7 @@ function VarietyDetail() {
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                                 <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                                    <div className="inline-block bg-[#16a34a] px-4 py-2 rounded-lg mb-2">
+                                    <div className="inline-block bg-[#1D724A] px-4 py-2 rounded-lg mb-2">
                                         <FaChartLine className="inline mr-2" />
                                         <span className="font-bold text-lg">{variety.yield} ตัน/ไร่</span>
                                     </div>
@@ -212,61 +358,96 @@ function VarietyDetail() {
                             </div>
 
                             {/* Info Section - 3/5 */}
-                            <div className="lg:col-span-3 p-8 lg:p-12">
-                                <h2 className="text-4xl font-bold text-gray-800 mb-6 border-b-4 border-[#16a34a] pb-4">
-                                    {variety.name}
-                                </h2>
+{/* Info Section - 3/5 */}
+<div className="lg:col-span-3 p-6 lg:p-8">
 
-                                {/* Quick Stats Grid */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                                    <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border-2 border-green-200 flex flex-col justify-center items-center">
-                                        <div className="text-3xl font-bold text-green-700">{variety.age}</div>
-                                        <div className="text-sm text-gray-600 mt-1">เดือน</div>
-                                    </div>
-                                    <div className="text-center p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl border-2 border-yellow-200 flex flex-col justify-center items-center">
-                                        <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 512 512" className="text-yellow-600 mx-auto mb-1" height="24" width="24" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M451.47 49.25l-70.22.125-5.47-.03L373.064 54l-34.344 58.875-58.876.125-31.188-53.375-2.625-4.72-5.468-.06-70.218.124-5.5-.032-2.688 4.656-34 58.312-65.562.125-5.47-.03-2.718 4.656-35.093 60.188-2.688 4.656 2.78 4.688 31.126 53.28-33.75 57.938-2.718 4.656 2.782 4.688 35.125 60.094 2.593 4.75 5.5.03 67.812-.124 31.03 53.03 2.595 4.75 5.5.033 67.594-.125 31.187 53.375 2.626 4.718 5.47.064 70.218-.125 5.312.092 2.72-4.656 34.155-58.375 65.564-.124 5.312.094 2.688-4.656 35.28-60.25 2.688-4.656-2.78-4.688-35.126-60.094-2.594-4.72-5.5-.06-67.593.124-27.19-46.5 32.94-56.344 61.53-.125 5.313.095 2.687-4.656 35.25-60.25 2.72-4.657-2.783-4.688-35.125-60.094-2.593-4.718-5.5-.062zm-5.345 18.656l29.5 51.094-29.53 50.688-59.47.093L357 118.876l29.656-50.906 59.47-.064zM127.47 136.562l29.5 51.094-29.532 50.688-59.47.094-29.624-50.907L68 136.626l59.47-.063zm106.905 58l28.53 49.5-30.374 52.125-57.78.094-29.5-50.717 29.656-50.907 59.47-.094zm105.313 57.344l29.375 50.938-29.532 50.72-59.467.06-28.72-49.343L281.907 252l57.78-.094zm106.78 57.875l29.5 51.095-29.53 50.688-59.47.062-29.624-50.875L387 309.844l59.47-.063zm-214.53 5.19l29.406 50.967-29.53 50.688-59.47.063-29.625-50.907 29.56-50.717 59.657-.094z"></path>
-                                        </svg>
-                                        <div className="text-2xl font-bold text-yellow-700">{variety.sweetness}</div>
-                                        <div className="text-sm text-gray-600">c.c.s</div>
-                                    </div>
-                                    <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border-2 border-blue-200 flex flex-col justify-center items-center">
-                                        <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 512 512" className="text-blue-600 mx-auto mb-1" height="20" width="20" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M64 96H0c0 123.7 100.3 224 224 224v144c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V320C288 196.3 187.7 96 64 96zm384-64c-84.2 0-157.4 46.5-195.7 115.2 27.7 30.2 48.2 66.9 59 107.6C424 243.1 512 147.9 512 32h-64z"></path>
-                                        </svg>
-                                        <div className="text-sm font-semibold text-blue-700 mt-1">{variety.soil_type}</div>
-                                    </div>
-                                    <div className="text-center p-4 bg-gradient-to-br from-red-50 to-red-100 rounded-xl border-2 border-red-200 flex flex-col justify-center items-center">
-                                        <svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 512 512" className="text-red-600 mx-auto mb-1" height="20" width="20" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M496 384H64V80c0-8.84-7.16-16-16-16H16C7.16 64 0 71.16 0 80v336c0 17.67 14.33 32 32 32h464c8.84 0 16-7.16 16-16v-32c0-8.84-7.16-16-16-16zM464 96H345.94c-21.38 0-32.09 25.85-16.97 40.97l32.4 32.4L288 242.75l-73.37-73.37c-12.5-12.5-32.76-12.5-45.25 0l-68.69 68.69c-6.25 6.25-6.25 16.38 0 22.63l22.62 22.62c6.25 6.25 16.38 6.25 22.63 0L192 237.25l73.37 73.37c12.5 12.5 32.76 12.5 45.25 0l96-96 32.4 32.4c15.12 15.12 40.97 4.41 40.97-16.97V112c.01-8.84-7.15-16-15.99-16z"></path>
-                                        </svg>
-                                        <div className="text-2xl font-bold text-red-700">{variety.yield}</div>
-                                        <div className="text-sm text-gray-600">ตัน/ไร่</div>
-                                    </div>
-                                </div>
+  {/* Name & Stats row */}
+  <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-6 items-start">
 
-                                {/* Parent Varieties */}
-                                {variety.parent_varieties && (
-                                    <div className="bg-gray-50 p-4 rounded-xl mb-4">
-                                        <h3 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
-                                            <FaLeaf className="text-[#16a34a]" />
-                                            พันธุ์พ่อแม่
-                                        </h3>
-                                        <p className="text-gray-600 ml-7">{variety.parent_varieties}</p>
-                                    </div>
-                                )}
+    {/* LEFT — Name */}
+    <div>
+      <h2 className="
+        text-2xl font-bold text-gray-800
+        border-b-4 border-[#16a34a]
+        pb-3
+      ">
+        {variety.name}
+      </h2>
+    </div>
 
-                                {/* Description */}
-                                {variety.description && (
-                                    <div className="bg-gray-50 p-4 rounded-xl mb-4">
-                                        <h3 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
-                                            <FaLeaf className="text-[#16a34a]" />
-                                            คำอธิบาย
-                                        </h3>
-                                        <p className="text-gray-600 ml-7">{variety.description}</p>
-                                    </div>
-                                )}
-                            </div>
+    {/* RIGHT — Stats */}
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      
+      {/* อายุ */}
+      <div className="text-center px-4 py-3 min-w-[96px] bg-[#f3faf7] border border-[#1D724A]/30 rounded-xl flex flex-col justify-center">
+        <div className="text-xl font-bold text-[#1D724A]">
+          {variety.age}
+        </div>
+        <div className="text-xs text-gray-600">
+          เดือน
+        </div>
+      </div>
+
+      {/* ความ���วาน */}
+      <div className="text-center px-4 py-3 min-w-[96px] bg-yellow-50 border border-yellow-200 rounded-xl flex flex-col justify-center">
+        <div className="text-xl font-bold text-yellow-700">
+          {variety.sweetness}
+        </div>
+        <div className="text-xs text-gray-600">
+          c.c.s
+        </div>
+      </div>
+
+      {/* ดิน */}
+      <div className="text-center px-4 py-3 min-w-[96px] bg-blue-50 border border-blue-200 rounded-xl flex flex-col justify-center">
+        <div className="text-sm font-semibold text-blue-700">
+          {variety.soil_type}
+        </div>
+        <div className="text-xs text-gray-600"> ดิน </div>
+      </div>
+
+      {/* Yield */}
+      <div className="text-center px-4 py-3 min-w-[96px] bg-red-50 border border-red-200 rounded-xl flex flex-col justify-center">
+        <div className="text-xl font-bold text-red-700">
+          {variety.yield}
+        </div>
+        <div className="text-xs text-gray-600">
+          ตัน/ไร่
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  {/* Parent Varieties */}
+  {variety.parent_varieties && (
+    <div className="bg-gray-50 p-4 rounded-xl mt-6 mb-4">
+      <h3 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
+        <FaLeaf className="text-[#16a34a]" />
+        พันธุ์พ่อแม่
+      </h3>
+      <p className="text-gray-600 ml-7">
+        {variety.parent_varieties}
+      </p>
+    </div>
+  )}
+
+  {/* Description */}
+  {variety.description && (
+    <div className="bg-gray-50 p-4 rounded-xl mb-4">
+      <h3 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
+        <FaLeaf className="text-[#16a34a]" />
+        คำอธิบาย
+      </h3>
+      <p className="text-gray-600 ml-7">
+        {variety.description}
+      </p>
+    </div>
+  )}
+
+</div>
+
                         </div>
                     </div>
 
@@ -276,15 +457,15 @@ function VarietyDetail() {
                         {variety.growth_characteristics && variety.growth_characteristics.length > 0 && (
                             <div className="bg-white rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-shadow">
                                 <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-gray-200">
-                                    <div className="bg-green-100 p-3 rounded-full">
-                                        <FaSeedling className="text-green-600" size={24} />
+                                    <div className="bg-[#1D724A]/10 p-3 rounded-full">
+                                        <FaSeedling className="text-[#1D724A]" size={24} />
                                     </div>
-                                    <h3 className="text-2xl font-bold text-gray-800">ลักษณะการเจริญเติบโต</h3>
+                                    <h3 className="text-xl font-bold text-gray-800">ลักษณะการเจริญเติบโต</h3>
                                 </div>
                                 <ul className="space-y-3">
                                     {variety.growth_characteristics.map((char, index) => (
                                         <li key={index} className="flex items-start gap-3 text-gray-700">
-                                            <span className="text-[#16a34a] font-bold mt-1">▪</span>
+                                            <span className="text-[#1D724A] font-bold mt-1">▪</span>
                                             <span className="flex-1">{char}</span>
                                         </li>
                                     ))}
@@ -295,18 +476,18 @@ function VarietyDetail() {
                         {/* Disease & Pest Resistance */}
                         <div className="bg-white rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-shadow">
                             <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-gray-200">
-                                <div className="bg-green-100 p-3 rounded-full">
-                                    <FaBug className="text-green-600" size={24} />
+                                <div className="bg-[#1D724A]/10 p-3 rounded-full">
+                                    <FaBug className="text-[#1D724A]" size={24} />
                                 </div>
-                                <h3 className="text-2xl font-bold text-gray-800">ความต้านทาน</h3>
+                                <h3 className="text-xl font-bold text-gray-800">ความต้านทาน</h3>
                             </div>
                             <div className="space-y-4">
-                                <div className="bg-green-50 p-4 rounded-xl border-l-4 border-green-500">
+                                <div className="bg-[#1D724A]/5 p-4 rounded-xl border-l-4 border-[#1D724A]">
                                     <div className="flex items-center gap-2 mb-2">
-                                        <svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 512 512" className="text-green-600" height="18" width="18" xmlns="http://www.w3.org/2000/svg">
+                                        <svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 512 512" className="text-[#1D724A]" height="18" width="18" xmlns="http://www.w3.org/2000/svg">
                                             <path d="M472.29 195.9l-67.06-23c-19.28-6.6-33.54-20.92-38.14-38.31l-16-60.45c-11.58-43.77-76.57-57.13-110-22.62L195 99.24c-13.26 13.71-33.54 20.93-54.2 19.31l-71.9-5.62c-52-4.07-86.93 44.89-59 82.84l38.54 52.42c11.08 15.07 12.82 33.86 4.64 50.24l-28.43 57C4 396.67 47.46 440.29 98.11 429.23l70-15.28c20.11-4.39 41.45 0 57.07 11.73l54.32 40.83c39.32 29.56 101 7.57 104.45-37.22l4.7-61.86c1.35-17.8 12.8-33.87 30.63-43l62-31.74c44.84-22.96 39.55-80.17-8.99-96.79zM160 256a32 32 0 1 1 32-32 32 32 0 0 1-32 32zm128 96a32 32 0 1 1 32-32 32 32 0 0 1-32 32zm16-128a16 16 0 1 1 16-16 16 16 0 0 1-16 16z"></path>
                                         </svg>
-                                        <h4 className="font-bold text-green-800">ต้านโรค</h4>
+                                        <h4 className="font-bold text-[#1D724A]">ต้านโรค</h4>
                                     </div>
                                     <p className="text-gray-700 ml-6">โรคจุดใบเหลือง, โรคใบขาว, โรคกอตะใคร้</p>
                                 </div>
@@ -327,7 +508,7 @@ function VarietyDetail() {
                                     <div className="bg-yellow-100 p-3 rounded-full">
                                         <FaLeaf className="text-yellow-600" size={24} />
                                     </div>
-                                    <h3 className="text-2xl font-bold text-gray-800">คำแนะนำในการปลูก</h3>
+                                    <h3 className="text-xl font-bold text-gray-800">คำแนะนำในการปลูก</h3>
                                 </div>
                                 <ul className="space-y-3">
                                     {variety.planting_tips.map((tip, index) => (
@@ -347,7 +528,7 @@ function VarietyDetail() {
                                     <div className="bg-purple-100 p-3 rounded-full">
                                         <FaChartLine className="text-purple-600" size={24} />
                                     </div>
-                                    <h3 className="text-2xl font-bold text-gray-800">เหมาะสำหรับ</h3>
+                                    <h3 className="text-xl font-bold text-gray-800">เหมาะสำหรับ</h3>
                                 </div>
                                 <ul className="space-y-3">
                                     {variety.suitable_for.map((item, index) => (
@@ -361,18 +542,155 @@ function VarietyDetail() {
                         )}
                     </div>
 
-                    {/* Back Button */}
-                    <div className="text-center mt-12">
-                        <button
-                            onClick={() => navigate('/')}
-                            className="bg-gradient-to-r from-[#16a34a] to-[#15803d] text-white px-10 py-4 rounded-xl text-lg font-bold hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
-                        >
-                            <FaArrowLeft className="inline mr-3" />
-                            กลับหน้าหลัก
-                        </button>
-                    </div>
+                    {/* Location Information */}
+{/* Location Information */}
+<div className="bg-white rounded-2xl shadow-xl p-8 mt-8 mb-8 hover:shadow-2xl transition-shadow">
+  <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-gray-200">
+    <div className="bg-green-100 p-3 rounded-full">
+      <GiShop className="text-green-600" size={24} />
+    </div>
+    <h3 className="text-xl font-bold text-gray-800">ร้านค้าที่จำหน่าย</h3>
+  </div>
+
+  {/* Cards */}
+  <div className="space-y-4">
+    {shopsLoading ? (
+      <div className="text-center py-8">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#16a34a]"></div>
+        <p className="mt-2 text-gray-600">กำลังโหลดข้อมูลร้านค้า...</p>
+      </div>
+    ) : shops.length === 0 ? (
+      <div className="text-center py-8">
+        <p className="text-gray-500">ไม่มีร้านค้าจำหน่ายพันธุ์อ้อยนี้ในขณะนี้</p>
+      </div>
+    ) : (
+      shops.map((inventory, index) => (
+        <div
+          key={index}
+          className="
+            flex flex-col sm:flex-row
+            items-start sm:items-center
+            gap-4
+            p-4
+            bg-gray-50
+            rounded-2xl
+            shadow
+            hover:shadow-lg
+            transition
+          "
+        >
+          {/* Image */}
+          <img
+            src="/bg-home.jpg"
+            alt={inventory.shopId.shopName}
+            className="
+              w-full sm:w-28
+              h-40 sm:h-20
+              rounded-xl
+              object-cover
+            "
+          />
+
+          {/* Info */}
+          <div className="flex-1">
+            <p className="font-bold text-gray-800 text-base">
+              {inventory.shopId.shopName}
+            </p>
+            <p className="text-sm text-gray-600">
+              📍 {inventory.shopId.address}, {inventory.shopId.district}, {inventory.shopId.province}
+            </p>
+            <p className="text-sm text-gray-600">
+              ☎️ {inventory.shopId.phone}
+            </p>
+            <div className="mt-2 flex items-center gap-3">
+              <span className={`text-sm font-semibold px-3 py-1 rounded-full ${
+                inventory.status === 'available' 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                {inventory.status === 'available' ? '✓ มีสต๊อค' : '✗ หมดสต๊อค'}
+              </span>
+              <span className="text-sm text-gray-700">
+                ราคา: <span className="font-bold text-green-600">{inventory.price.toLocaleString('th-TH')} บาท/ไร่</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Button */}
+          <button
+            onClick={() => handleAddToCart(inventory.shopId._id, inventory.shopId.shopName, inventory.price)}
+            disabled={addingToCart === inventory.shopId._id}
+            className={`
+              w-full sm:w-[140px]
+              py-2
+              border border-[#1D724A]
+              text-[#1D724A]
+              rounded-full
+              font-semibold
+              text-sm
+              transition
+
+              ${addingToCart === inventory.shopId._id 
+                ? 'opacity-50 cursor-not-allowed' 
+                : 'hover:bg-[#1D724A] hover:text-white cursor-pointer'
+              }
+            `}
+          >
+            {addingToCart === inventory.shopId._id ? 'กำลังเพิ่ม...' : 'เพิ่มไปยังรถเข็น'}
+          </button>
+        </div>
+      ))
+    )}
+
+  </div>
+</div>
+
+
+
                 </div>
             </div>
+            {showScrollArrow && (
+              <button
+                onClick={scrollToTop}
+                aria-label="scroll-to-top"
+                className="
+                  fixed
+                  left-1/2 bottom-6
+                  -translate-x-1/2
+                  z-50
+
+                  w-10 h-10
+                  flex items-center justify-center
+
+                  border border-[#1D724A]/50
+                  rounded-full
+                  bg-white/80 backdrop-blur
+                  text-[#1D724A]
+
+                  shadow-md shadow-[#1D724A]/30
+                  hover:bg-[#1D724A]
+                  hover:text-white
+
+                  transition-all
+                  hover:scale-110
+                  animate-bounce
+                "
+              >
+                <svg
+                  className="w-5 h-5 rotate-180"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+            )}
             <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} onLogin={handleLogin} />
             <FloatingBookIcon
                 count={favorites.length}
@@ -384,6 +702,19 @@ function VarietyDetail() {
                     alert('รายการที่ถูกใจ (ยังไม่พร้อม)');
                 }}
             />
+            <CartModal
+              isOpen={showCartModal}
+              onClose={handleCloseCart}
+              userId={userId}
+              onCheckout={() => {
+                handleCloseCart();
+              }}
+              onCheckoutSuccess={(itemCount, totalPrice) => {
+                addToast(`ชำระเงินสำเร็จ! รวม ${itemCount} รายการ จำนวนเงิน ${totalPrice.toLocaleString('th-TH')} บาท`, 'success');
+              }}
+              onShowToast={addToast}
+            />
+        <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
         </>
     );
 }

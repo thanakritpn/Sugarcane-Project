@@ -5,6 +5,9 @@ import cors from 'cors';
 import Variety from './models/Variety';
 import User from './models/User';
 import Favorite from './models/Favorite';
+import Shop from './models/Shop';
+import ShopInventory from './models/ShopInventory';
+import Cart from './models/Cart';
 import bcrypt from 'bcryptjs';
 import multer from 'multer'
 import * as fs from 'fs'
@@ -56,9 +59,9 @@ app.get('/api/varieties', async (_req: Request, res: Response) => {
 // API: Search varieties with filters (MUST be before /:id route)
 app.get('/api/varieties/search', async (req: Request, res: Response) => {
     try {
-        const { soil_type, pest, disease } = req.query;
+        const { soil_type, pest, disease, name } = req.query;
         
-        console.log('🔍 Backend received query params:', { soil_type, pest, disease });
+        console.log('🔍 Backend received query params:', { soil_type, pest, disease, name });
 
         // Build filter dynamically
         const filter: any = {};
@@ -66,6 +69,8 @@ app.get('/api/varieties/search', async (req: Request, res: Response) => {
         // ใช้ $in เพื่อค้นหาใน array
         if (pest) filter.pest = { $in: [pest] };
         if (disease) filter.disease = { $in: [disease] };
+        // Add name/text search using regex for case-insensitive matching
+        if (name) filter.name = { $regex: name, $options: 'i' };
 
         console.log('🎯 MongoDB filter:', JSON.stringify(filter, null, 2));
 
@@ -420,17 +425,22 @@ app.post('/api/seed', async (_req: Request, res: Response) => {
 async function ensureInitialUser() {
     try {
         const users = [
-            { email: 'aofza1508@gmail.com', password: '111111' },
-            { email: 'jeeranan.prak@gmail.com', password: '111111' }
+            { email: 'aofza1508@gmail.com', username: 'aofza', name: 'aofza', password: '111111' },
+            { email: 'jeeranan.prak@gmail.com', username: 'jeerananmail', name: 'jeeranan', password: '111111' }
         ];
 
         for (const userData of users) {
-            const existing = await User.findOne({ email: userData.email });
+            const existing = await User.findOne({ $or: [{ email: userData.email }, { username: userData.username }] });
             if (!existing) {
                 const hashed = await bcrypt.hash(userData.password, 10);
-                const u = new User({ email: userData.email, password: hashed });
+                const u = new User({ 
+                  email: userData.email, 
+                  username: userData.username,
+                  name: userData.name,
+                  password: hashed 
+                });
                 await u.save();
-                console.log(`✓ Seeded user: ${userData.email}`);
+                console.log(`✓ Seeded user: ${userData.email} (${userData.username})`);
             } else {
                 console.log(`User already exists: ${userData.email}`);
             }
@@ -440,6 +450,33 @@ async function ensureInitialUser() {
     }
 }
 
+ensureInitialUser();
+
+// Ensure user indexes are correct and clean up old collections
+async function ensureUserIndexes() {
+    try {
+        // Drop the old collection if it exists (to force recreate with new schema)
+        try {
+            await User.collection.drop();
+            console.log('✓ Dropped old User collection to recreate with new schema');
+        } catch (err: any) {
+            if (err.code !== 26) { // 26 = namespace not found
+                console.warn('Warning when dropping User collection:', err.message);
+            }
+        }
+
+        // Create new indexes
+        await User.collection.createIndex({ email: 1 }, { unique: true });
+        await User.collection.createIndex({ username: 1 }, { unique: true });
+        console.log('✓ Ensured User indexes (email, username)');
+    } catch (err) {
+        console.error('Error ensuring user indexes:', err);
+    }
+}
+
+ensureUserIndexes();
+
+// Re-seed users after indexes are created
 ensureInitialUser();
 
 // Ensure favorite indexes are correct (compound unique on userId + varietyId).
@@ -515,6 +552,70 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
     } catch (err) {
         console.error('Login error:', err);
         res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// API: POST /api/auth/register
+app.post('/api/auth/register', async (req: Request, res: Response) => {
+    try {
+        const { email, username, name, password, confirmPassword } = req.body || {};
+
+        // Validation
+        if (!email || !username || !password || !confirmPassword) {
+            res.status(400).json({ error: 'Missing required fields' });
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            res.status(400).json({ error: 'Passwords do not match' });
+            return;
+        }
+
+        if (password.length < 6) {
+            res.status(400).json({ error: 'Password must be at least 6 characters' });
+            return;
+        }
+
+        // Check if user already exists
+        const existing = await User.findOne({ 
+            $or: [
+                { email: String(email).toLowerCase().trim() },
+                { username: String(username).trim() }
+            ]
+        });
+
+        if (existing) {
+            if (existing.email === String(email).toLowerCase().trim()) {
+                res.status(400).json({ error: 'Email already registered' });
+            } else {
+                res.status(400).json({ error: 'Username already taken' });
+            }
+            return;
+        }
+
+        // Hash password and create user
+        const hashed = await bcrypt.hash(String(password), 10);
+        const newUser = new User({
+            email: String(email).toLowerCase().trim(),
+            username: String(username).trim(),
+            name: String(name || '').trim(),
+            password: hashed
+        });
+
+        const savedUser = await newUser.save();
+
+        // Return user info
+        res.status(201).json({
+            message: 'User registered successfully',
+            email: savedUser.email,
+            id: savedUser._id
+        });
+    } catch (err: any) {
+        console.error('Register error:', err);
+        res.status(500).json({ 
+            error: 'Failed to register',
+            details: err.message 
+        });
     }
 });
 
@@ -628,6 +729,459 @@ app.delete('/api/favorites/:userId/:varietyId', async (req: Request, res: Respon
     }
 });
 
+// ==================== SHOP APIs ====================
+
+// API: Register new shop
+app.post('/api/shops/register', async (req: Request, res: Response) => {
+    try {
+        const { username, email, password, shopName, phone, address, district, province } = req.body;
+
+        if (!username || !email || !password || !shopName || !phone || !address || !district || !province) {
+            res.status(400).json({ error: 'All fields are required' });
+            return;
+        }
+
+        // Check if shop already exists
+        const existingShop = await Shop.findOne({ $or: [{ email }, { username }] });
+        if (existingShop) {
+            res.status(409).json({ error: 'Shop already exists' });
+            return;
+        }
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Create new shop
+        const newShop = new Shop({
+            username,
+            email,
+            password: hashedPassword,
+            shopName,
+            phone,
+            address,
+            district,
+            province,
+        });
+
+        await newShop.save();
+
+        res.status(201).json({
+            message: 'Shop registered successfully',
+            data: {
+                _id: newShop._id,
+                username: newShop.username,
+                email: newShop.email,
+                shopName: newShop.shopName,
+            }
+        });
+    } catch (err: any) {
+        console.error('Register shop error:', err);
+        res.status(500).json({ 
+            error: 'Failed to register shop',
+            details: err.message 
+        });
+    }
+});
+
+// API: Login shop
+app.post('/api/shops/login', async (req: Request, res: Response) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            res.status(400).json({ error: 'Email and password are required' });
+            return;
+        }
+
+        const shop = await Shop.findOne({ email });
+        if (!shop) {
+            res.status(401).json({ error: 'Invalid credentials' });
+            return;
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, shop.password);
+        if (!isPasswordValid) {
+            res.status(401).json({ error: 'Invalid credentials' });
+            return;
+        }
+
+        res.json({
+            message: 'Login successful',
+            data: {
+                _id: shop._id,
+                username: shop.username,
+                email: shop.email,
+                shopName: shop.shopName,
+                phone: shop.phone,
+                address: shop.address,
+                district: shop.district,
+                province: shop.province,
+            }
+        });
+    } catch (err: any) {
+        console.error('Login shop error:', err);
+        res.status(500).json({ 
+            error: 'Failed to login',
+            details: err.message 
+        });
+    }
+});
+
+// API: Get all shops
+app.get('/api/shops', async (_req: Request, res: Response) => {
+    try {
+        const shops = await Shop.find()
+            .select('-password')
+            .sort({ createdAt: -1 })
+            .lean();
+        res.json(shops);
+    } catch (err: any) {
+        console.error('Get shops error:', err);
+        res.status(500).json({ 
+            error: 'Failed to fetch shops',
+            details: err.message 
+        });
+    }
+});
+
+// API: Get shop by ID
+app.get('/api/shops/:id', async (req: Request, res: Response) => {
+    try {
+        const shop = await Shop.findById(req.params.id).select('-password').lean();
+        if (!shop) {
+            res.status(404).json({ error: 'Shop not found' });
+            return;
+        }
+        res.json(shop);
+    } catch (err: any) {
+        console.error('Get shop error:', err);
+        res.status(500).json({ 
+            error: 'Failed to fetch shop',
+            details: err.message 
+        });
+    }
+});
+
+// API: Update shop info
+app.put('/api/shops/:id', async (req: Request, res: Response) => {
+    try {
+        const { shopName, phone, address, district, province } = req.body;
+        
+        const updatedShop = await Shop.findByIdAndUpdate(
+            req.params.id,
+            { shopName, phone, address, district, province },
+            { new: true }
+        ).select('-password');
+
+        if (!updatedShop) {
+            res.status(404).json({ error: 'Shop not found' });
+            return;
+        }
+
+        res.json({
+            message: 'Shop updated successfully',
+            data: updatedShop
+        });
+    } catch (err: any) {
+        console.error('Update shop error:', err);
+        res.status(500).json({ 
+            error: 'Failed to update shop',
+            details: err.message 
+        });
+    }
+});
+
+// ==================== SHOP INVENTORY APIs ====================
+
+// API: Add variety to shop inventory
+app.post('/api/shop-inventory', async (req: Request, res: Response) => {
+    try {
+        const { shopId, varietyId, price, status, quantity } = req.body;
+
+        if (!shopId || !varietyId || price === undefined) {
+            res.status(400).json({ error: 'shopId, varietyId, and price are required' });
+            return;
+        }
+
+        // Check if variety already in shop inventory
+        const existingInventory = await ShopInventory.findOne({ shopId, varietyId });
+        if (existingInventory) {
+            res.status(409).json({ error: 'Variety already in shop inventory' });
+            return;
+        }
+
+        const newInventory = new ShopInventory({
+            shopId,
+            varietyId,
+            price,
+            status: status || 'available',
+            quantity,
+        });
+
+        await newInventory.save();
+
+        res.status(201).json({
+            message: 'Variety added to inventory successfully',
+            data: newInventory
+        });
+    } catch (err: any) {
+        console.error('Add inventory error:', err);
+        res.status(500).json({ 
+            error: 'Failed to add inventory',
+            details: err.message 
+        });
+    }
+});
+
+// API: Get shop inventory (with variety details)
+app.get('/api/shops/:shopId/inventory', async (req: Request, res: Response) => {
+    try {
+        const inventory = await ShopInventory.find({ shopId: req.params.shopId })
+            .populate('varietyId')
+            .sort({ createdAt: -1 })
+            .lean();
+        
+        res.json(inventory);
+    } catch (err: any) {
+        console.error('Get inventory error:', err);
+        res.status(500).json({ 
+            error: 'Failed to fetch inventory',
+            details: err.message 
+        });
+    }
+});
+
+// API: Update inventory (price/status/quantity)
+app.put('/api/shop-inventory/:id', async (req: Request, res: Response) => {
+    try {
+        const { price, status, quantity } = req.body;
+
+        const updatedInventory = await ShopInventory.findByIdAndUpdate(
+            req.params.id,
+            { price, status, quantity },
+            { new: true }
+        ).populate('varietyId');
+
+        if (!updatedInventory) {
+            res.status(404).json({ error: 'Inventory item not found' });
+            return;
+        }
+
+        res.json({
+            message: 'Inventory updated successfully',
+            data: updatedInventory
+        });
+    } catch (err: any) {
+        console.error('Update inventory error:', err);
+        res.status(500).json({ 
+            error: 'Failed to update inventory',
+            details: err.message 
+        });
+    }
+});
+
+// API: Remove variety from shop inventory
+app.delete('/api/shop-inventory/:id', async (req: Request, res: Response) => {
+    try {
+        const result = await ShopInventory.findByIdAndDelete(req.params.id);
+
+        if (!result) {
+            res.status(404).json({ error: 'Inventory item not found' });
+            return;
+        }
+
+        res.json({
+            message: 'Inventory item removed successfully',
+            data: result
+        });
+    } catch (err: any) {
+        console.error('Delete inventory error:', err);
+        res.status(500).json({ 
+            error: 'Failed to delete inventory',
+            details: err.message 
+        });
+    }
+});
+
+// API: Get all shop inventories (for searching by variety)
+app.get('/api/shop-inventory/variety/:varietyId', async (req: Request, res: Response) => {
+    try {
+        const inventories = await ShopInventory.find({ varietyId: req.params.varietyId })
+            .populate('shopId', '-password')
+            .sort({ price: 1 })
+            .lean();
+        
+        res.json(inventories);
+    } catch (err: any) {
+        console.error('Get variety inventories error:', err);
+        res.status(500).json({ 
+            error: 'Failed to fetch inventories',
+            details: err.message 
+        });
+    }
+});
+
+// ==================== CART APIs ====================
+
+// API: Add item to cart
+app.post('/api/cart', async (req: Request, res: Response) => {
+    try {
+        const { userId, shopId, varietyId, price, quantity } = req.body;
+
+        if (!userId || !shopId || !varietyId || !price || !quantity) {
+            res.status(400).json({ error: 'userId, shopId, varietyId, price, and quantity are required' });
+            return;
+        }
+
+        // Check if item already in cart for this user, shop, and variety
+        const existingCart = await Cart.findOne({ userId, shopId, varietyId });
+        
+        if (existingCart) {
+            // Update quantity if already exists
+            existingCart.quantity += Number(quantity);
+            await existingCart.save();
+            res.json({
+                message: 'Item quantity updated in cart',
+                data: existingCart
+            });
+            return;
+        }
+
+        // Create new cart item
+        const newCart = new Cart({
+            userId,
+            shopId,
+            varietyId,
+            price: Number(price),
+            quantity: Number(quantity),
+            status: 'pending'
+        });
+
+        await newCart.save();
+
+        res.status(201).json({
+            message: 'Item added to cart successfully',
+            data: newCart
+        });
+    } catch (err: any) {
+        console.error('Add to cart error:', err);
+        res.status(500).json({ 
+            error: 'Failed to add item to cart',
+            details: err.message 
+        });
+    }
+});
+
+// API: Get user's cart
+app.get('/api/cart/:userId', async (req: Request, res: Response) => {
+    try {
+        const { userId } = req.params;
+
+        if (!userId) {
+            res.status(400).json({ error: 'userId is required' });
+            return;
+        }
+
+        const cartItems = await Cart.find({ userId })
+            .populate('varietyId')
+            .populate('shopId', '-password')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        res.json({
+            message: 'Cart items retrieved successfully',
+            data: cartItems
+        });
+    } catch (err: any) {
+        console.error('Get cart error:', err);
+        res.status(500).json({ 
+            error: 'Failed to fetch cart',
+            details: err.message 
+        });
+    }
+});
+
+// API: Update cart item
+app.put('/api/cart/:cartId', async (req: Request, res: Response) => {
+    try {
+        const { quantity, status } = req.body;
+
+        const updateData: any = {};
+        if (quantity !== undefined) updateData.quantity = Number(quantity);
+        if (status !== undefined) updateData.status = status;
+
+        const updatedCart = await Cart.findByIdAndUpdate(
+            req.params.cartId,
+            updateData,
+            { new: true }
+        ).populate('varietyId').populate('shopId', '-password');
+
+        if (!updatedCart) {
+            res.status(404).json({ error: 'Cart item not found' });
+            return;
+        }
+
+        res.json({
+            message: 'Cart item updated successfully',
+            data: updatedCart
+        });
+    } catch (err: any) {
+        console.error('Update cart error:', err);
+        res.status(500).json({ 
+            error: 'Failed to update cart',
+            details: err.message 
+        });
+    }
+});
+
+// API: Remove item from cart
+app.delete('/api/cart/:cartId', async (req: Request, res: Response) => {
+    try {
+        const result = await Cart.findByIdAndDelete(req.params.cartId);
+
+        if (!result) {
+            res.status(404).json({ error: 'Cart item not found' });
+            return;
+        }
+
+        res.json({
+            message: 'Item removed from cart successfully',
+            data: result
+        });
+    } catch (err: any) {
+        console.error('Delete from cart error:', err);
+        res.status(500).json({ 
+            error: 'Failed to remove item from cart',
+            details: err.message 
+        });
+    }
+});
+
+// API: Clear user's entire cart
+app.delete('/api/cart-clear/:userId', async (req: Request, res: Response) => {
+    try {
+        const { userId } = req.params;
+
+        if (!userId) {
+            res.status(400).json({ error: 'userId is required' });
+            return;
+        }
+
+        const result = await Cart.deleteMany({ userId });
+
+        res.json({
+            message: 'Cart cleared successfully',
+            deletedCount: result.deletedCount
+        });
+    } catch (err: any) {
+        console.error('Clear cart error:', err);
+        res.status(500).json({ 
+            error: 'Failed to clear cart',
+            details: err.message 
+        });
+    }
+});
+
 // Start server
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
@@ -643,6 +1197,21 @@ app.listen(PORT, () => {
     console.log(`   GET    /api/favorites/:userId  - Get user favorites`);
     console.log(`   POST   /api/favorites          - Add favorite`);
     console.log(`   DELETE /api/favorites/:userId/:varietyId - Remove favorite`);
+    console.log(`   POST   /api/shops/register     - Register new shop`);
+    console.log(`   POST   /api/shops/login        - Shop login`);
+    console.log(`   GET    /api/shops              - Get all shops`);
+    console.log(`   GET    /api/shops/:id          - Get shop by ID`);
+    console.log(`   PUT    /api/shops/:id          - Update shop info`);
+    console.log(`   POST   /api/shop-inventory    - Add variety to inventory`);
+    console.log(`   GET    /api/shops/:shopId/inventory - Get shop inventory`);
+    console.log(`   PUT    /api/shop-inventory/:id - Update inventory (price/status)`);
+    console.log(`   DELETE /api/shop-inventory/:id - Remove item from inventory`);
+    console.log(`   GET    /api/shop-inventory/variety/:varietyId - Find shops selling variety`);
+    console.log(`   POST   /api/cart               - Add item to cart`);
+    console.log(`   GET    /api/cart/:userId       - Get user's cart`);
+    console.log(`   PUT    /api/cart/:cartId       - Update cart item`);
+    console.log(`   DELETE /api/cart/:cartId       - Remove item from cart`);
+    console.log(`   DELETE /api/cart-clear/:userId - Clear user's cart`);
 });
 
 // Graceful shutdown

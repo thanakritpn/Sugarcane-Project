@@ -6,6 +6,7 @@ import { store } from './store'
 import './index.css'
 import Home from './pages/Home'
 import VarietyDetail from './pages/VarietyDetail'
+import ContactUs from './pages/ContactUs'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -14,6 +15,7 @@ createRoot(document.getElementById('root')!).render(
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/variety/:id" element={<VarietyDetail />} />
+          <Route path="/contact" element={<ContactUs />} />
         </Routes>
       </BrowserRouter>
     </Provider>

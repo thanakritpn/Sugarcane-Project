@@ -5,9 +5,10 @@ type Props = {
   isOpen: boolean;
   onClose: () => void;
   onLogin: (username: string) => void;
+  onSignupClick?: () => void;
 };
 
-const LoginModal: React.FC<Props> = ({ isOpen, onClose, onLogin }) => {
+const LoginModal: React.FC<Props> = ({ isOpen, onClose, onLogin, onSignupClick }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -63,10 +64,10 @@ const LoginModal: React.FC<Props> = ({ isOpen, onClose, onLogin }) => {
             ✕
           </button>
         </div>
-        <p className="text-sm text-gray-600 mb-4">กรุณาเข้าสู่ระบบเพื่อใช้ฟีเจอร์ถูกใจ</p>
+        <p className="text-sm text-gray-600 mb-4">กรุณาเข้าสู่ระบบเพื่อใช้ฟีเจอร์ครบวงจร</p>
 
         <form onSubmit={handleSubmit}>
-          <label className="block text-sm font-medium text-gray-700">Email</label>
+          <label className="block text-sm font-medium text-gray-700">อีเมล</label>
           <input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -74,7 +75,7 @@ const LoginModal: React.FC<Props> = ({ isOpen, onClose, onLogin }) => {
             autoFocus
           />
 
-          <label className="block text-sm font-medium text-gray-700">Password</label>
+          <label className="block text-sm font-medium text-gray-700">รหัสผ่าน</label>
           <input
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -90,12 +91,12 @@ const LoginModal: React.FC<Props> = ({ isOpen, onClose, onLogin }) => {
         {/* Sign Up Link */}
         <div className="mt-4 pt-4 border-t border-gray-200 text-center">
           <p className="text-sm text-gray-600 mb-2">ยังไม่มีบัญชี?</p>
-          <a 
-            href="#signup" 
+          <button 
+            onClick={onSignupClick}
             className="text-sm text-[#16a34a] font-semibold hover:underline"
           >
             สมัครสมาชิก
-          </a>
+          </button>
         </div>
       </div>
     </div>

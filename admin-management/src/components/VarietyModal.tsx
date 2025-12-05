@@ -341,7 +341,7 @@ const VarietyModal: React.FC<VarietyModalProps> = ({
           {/* Submit */}
           <button
             onClick={onSubmit}
-            className="w-full bg-[#15803D] hover:bg-[#136e35] text-white 
+            className="w-full bg-[#1D724A] hover:bg-[#155838] text-white 
                        font-semibold py-3 rounded-lg shadow-md mt-6 transition"
           >
             {mode === 'add' ? 'เพิ่มพันธุ์อ้อย' : 'บันทึกการแก้ไข'}

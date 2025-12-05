@@ -23,9 +23,9 @@ interface VarietiesState {
     items: Variety[];
     filteredItems: Variety[];
     filters: {
-        soil: string;
-        pest: string;
-        disease: string;
+        soil: string[];
+        pest: string[];
+        disease: string[];
     };
     loading: boolean;
     error: string | null;
@@ -35,9 +35,9 @@ const initialState: VarietiesState = {
     items: [],
     filteredItems: [],
     filters: {
-        soil: '',
-        pest: '',
-        disease: '',
+        soil: [],
+        pest: [],
+        disease: [],
     },
     loading: false,
     error: null,
@@ -80,30 +80,39 @@ const varietiesSlice = createSlice({
     initialState,
     reducers: {
         setFilter: (state, action: PayloadAction<{ filterType: 'soil' | 'pest' | 'disease'; value: string }>) => {
-            console.log('🔍 Setting filter:', action.payload.filterType, '=', action.payload.value);
-            state.filters[action.payload.filterType] = action.payload.value;
+            const { filterType, value } = action.payload;
+            const filterArray = state.filters[filterType];
+            
+            if (filterArray.includes(value)) {
+                // Remove if already selected
+                state.filters[filterType] = filterArray.filter(item => item !== value);
+            } else {
+                // Add if not selected
+                state.filters[filterType].push(value);
+            }
+            console.log('🔍 Toggled filter:', filterType, 'Current values:', state.filters[filterType]);
         },
         applyFilters: (state) => {
             console.log('🎯 Applying filters:', state.filters);
             console.log('📊 Total items before filter:', state.items.length);
             let filtered = state.items;
 
-            if (state.filters.soil) {
+            if (state.filters.soil.length > 0) {
                 console.log('🌱 Filtering by soil:', state.filters.soil);
                 const beforeCount = filtered.length;
-                filtered = filtered.filter(item => item.soil_type === state.filters.soil);
+                filtered = filtered.filter(item => state.filters.soil.includes(item.soil_type));
                 console.log(`  ✓ Soil filter: ${beforeCount} → ${filtered.length} items`);
             }
-            if (state.filters.pest) {
+            if (state.filters.pest.length > 0) {
                 console.log('🐛 Filtering by pest:', state.filters.pest);
                 const beforeCount = filtered.length;
-                filtered = filtered.filter(item => item.pest.includes(state.filters.pest));
+                filtered = filtered.filter(item => item.pest.some(p => state.filters.pest.includes(p)));
                 console.log(`  ✓ Pest filter: ${beforeCount} → ${filtered.length} items`);
             }
-            if (state.filters.disease) {
+            if (state.filters.disease.length > 0) {
                 console.log('🦠 Filtering by disease:', state.filters.disease);
                 const beforeCount = filtered.length;
-                filtered = filtered.filter(item => item.disease.includes(state.filters.disease));
+                filtered = filtered.filter(item => item.disease.some(d => state.filters.disease.includes(d)));
                 console.log(`  ✓ Disease filter: ${beforeCount} → ${filtered.length} items`);
             }
 
@@ -111,7 +120,7 @@ const varietiesSlice = createSlice({
             state.filteredItems = filtered;
         },
         resetFilters: (state) => {
-            state.filters = { soil: '', pest: '', disease: '' };
+            state.filters = { soil: [], pest: [], disease: [] };
             state.filteredItems = state.items;
         },
     },

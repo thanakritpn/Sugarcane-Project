@@ -442,7 +442,7 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
           <div className="flex items-center justify-end mb-6">
             <button
               onClick={() => setShowAddPanel(true)}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white font-semibold py-2.5 px-8 rounded-lg shadow-md hover:shadow-lg transition"
+              className="bg-[#1D724A] hover:bg-[#155838] text-white font-semibold py-2.5 px-8 rounded-lg shadow-md hover:shadow-lg transition"
             >
               + เพิ่มพันธุ์อ้อย
             </button>
@@ -458,7 +458,7 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
                   {/* Spinning circle */}
                   <svg className="animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="12" cy="12" r="10" stroke="#e5e7eb" strokeWidth="4"></circle>
-                    <path d="M12 2a10 10 0 0 1 10 10" stroke="#16a34a" strokeWidth="4" strokeLinecap="round"></path>
+                    <path d="M12 2a10 10 0 0 1 10 10" stroke="#1D724A" strokeWidth="4" strokeLinecap="round"></path>
                   </svg>
                 </div>
                 <p className="text-gray-600 font-medium text-lg">กำลังโหลดข้อมูล...</p>
@@ -472,10 +472,10 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
             )}
             {!loading && !error && filteredItems.length === 0 && (
               <div className="col-span-full flex flex-col items-center justify-center py-16 animate-in fade-in duration-200">
-                <div className="bg-gradient-to-r from-green-100 via-white to-green-100 rounded-full p-6 shadow-lg mb-4">
-                  <svg className="w-16 h-16 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <circle cx="11" cy="11" r="8" stroke="#16A34A" strokeWidth="2" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35" stroke="#16A34A" />
+                <div className="bg-gradient-to-r from-[#1D724A]/10 via-white to-[#1D724A]/10 rounded-full p-6 shadow-lg mb-4">
+                  <svg className="w-16 h-16 text-[#1D724A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8" stroke="#1D724A" strokeWidth="2" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35" stroke="#1D724A" />
                   </svg>
                 </div>
                 <h2 className="text-2xl font-bold text-gray-700 mb-2">ไม่พบข้อมูล</h2>
@@ -515,7 +515,7 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
                 {/* Content */}
                 <div className="p-4 flex-1 flex flex-col">
                   {/* Title */}
-                  <h3 className="text-lg font-bold text-[#16A34A]">
+                  <h3 className="text-lg font-bold text-[#1D724A]">
                     {item.name}
                   </h3>
 
@@ -533,7 +533,7 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
                   {/* Edit Button */}
                   <button
                     onClick={() => setEditingItem(item)}
-                    className="bg-[#16A34A] hover:bg-[#15803D] text-white font-semibold py-2.5 rounded-lg shadow-md hover:shadow-lg transition"
+                    className="bg-[#1D724A] hover:bg-[#155838] text-white font-semibold py-2.5 rounded-lg shadow-md hover:shadow-lg transition"
                   >
                     แก้ไข
                   </button>
