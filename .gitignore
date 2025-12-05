@@ -24,8 +24,10 @@ build/
 # Prisma
 /generated/
 
-# Images
-images/
+# Images - Allow committed images but ignore uploads
+backend/images/users/
+backend/images/shops/
+backend/images/variety/
 
 # OS
 .DS_Store
