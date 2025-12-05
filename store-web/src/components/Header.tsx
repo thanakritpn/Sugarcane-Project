@@ -41,10 +41,6 @@ export default function Header({
               คลังสินค้า
             </NavLink>
 
-            <NavLink to="/content" className={menuClass}>
-              รายการสั่งซื้อ
-            </NavLink>
-
             <NavLink to="/stores" className={menuClass}>
               จัดการร้านค้า
             </NavLink>

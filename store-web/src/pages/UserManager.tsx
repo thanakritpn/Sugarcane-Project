@@ -11,6 +11,7 @@ interface User {
   email: string;
   role: "Admin" | "User";
   profile_image?: string;
+  phone?: string;
   status?: "Active" | "Inactive";
 }
 
@@ -20,6 +21,7 @@ interface UserFormData {
   password: string;
   role: "Admin" | "User";
   profile_image?: string;
+  phone?: string;
 }
 
 const initialFormData: UserFormData = {
@@ -28,6 +30,7 @@ const initialFormData: UserFormData = {
   password: '',
   role: 'User',
   profile_image: '',
+  phone: '',
 };
 
 export default function UserManager() {
@@ -87,6 +90,7 @@ export default function UserManager() {
       password: '',
       role: user.role,
       profile_image: user.profile_image || '',
+      phone: user.phone || '',
     });
     if (user.profile_image) {
       setSelectedImagePreview(`${API_BASE_URL}/images/users/${user.profile_image}`);
@@ -185,6 +189,7 @@ export default function UserManager() {
         form.append('email', formData.email);
         form.append('password', formData.password);
         form.append('role', formData.role);
+        form.append('phone', formData.phone || '');
 
         response = await fetch(`${API_BASE_URL}/api/users`, {
           method: 'POST',
@@ -196,6 +201,7 @@ export default function UserManager() {
           email: formData.email,
           password: formData.password,
           role: formData.role,
+          phone: formData.phone || '',
         };
 
         response = await fetch(`${API_BASE_URL}/api/users`, {
@@ -412,6 +418,7 @@ export default function UserManager() {
           form.append('password', formData.password);
         }
         form.append('role', formData.role);
+        form.append('phone', formData.phone || '');
 
         console.log('Submitting edit with file, user ID:', editingUserId);
         response = await fetch(`${API_BASE_URL}/api/users/${editingUserId}`, {
@@ -423,6 +430,7 @@ export default function UserManager() {
           username: formData.username,
           email: formData.email,
           role: formData.role,
+          phone: formData.phone || '',
         };
         if (formData.password) {
           payload.password = formData.password;
@@ -542,16 +550,17 @@ export default function UserManager() {
           <table className="w-full">
             <thead className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-100">
               <tr>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-[28%] min-w-[160px]">ชื่อ</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-[32%] min-w-[200px]">อีเมล</th>
-                <th className="px-6 py-4 text-center text-sm font-semibold text-gray-800 w-[15%] min-w-[90px]">บทบาท</th>
-                <th className="px-6 py-4 text-center text-sm font-semibold text-gray-800 w-[25%] min-w-[140px]">การดำเนินการ</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-[24%] min-w-[140px]">ชื่อ</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-[28%] min-w-[180px]">อีเมล</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-800 w-[18%] min-w-[120px]">เบอร์โทร</th>
+                <th className="px-6 py-4 text-center text-sm font-semibold text-gray-800 w-[12%] min-w-[80px]">บทบาท</th>
+                <th className="px-6 py-4 text-center text-sm font-semibold text-gray-800 w-[18%] min-w-[120px]">การดำเนินการ</th>
               </tr>
             </thead>
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center">
+                  <td colSpan={6} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <div className="relative w-12 h-12 mb-4">
                         <svg className="animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -566,7 +575,7 @@ export default function UserManager() {
               )}
               {error && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-red-600">
+                  <td colSpan={6} className="px-6 py-4 text-center text-red-600">
                     เกิดข้อผิดพลาด: {error}
                   </td>
                 </tr>
@@ -587,6 +596,7 @@ export default function UserManager() {
                     </div>
                   </td>
                   <td className="px-6 py-4 align-middle text-sm text-gray-600">{user.email}</td>
+                  <td className="px-6 py-4 align-middle text-sm text-gray-600">{user.phone || 'ไม่ระบุ'}</td>
                   <td className="px-6 py-4 align-middle text-center">
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getRoleColor(user.role)}`}>{user.role}</span>
                   </td>

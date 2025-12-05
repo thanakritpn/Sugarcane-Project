@@ -63,14 +63,25 @@ export default function ShopManager() {
     const fetchShops = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${API_BASE_URL}/api/shops`, {
+        
+        // Get current shop data from localStorage
+        const shopDataStr = localStorage.getItem('shopData');
+        if (!shopDataStr) {
+          throw new Error('ไม่พบข้อมูลร้านค้า');
+        }
+        
+        const shopData = JSON.parse(shopDataStr);
+        const shopId = shopData._id;
+        
+        // Fetch only this shop's data
+        const response = await fetch(`${API_BASE_URL}/api/shops/${shopId}`, {
           signal: abortController.signal
         });
         if (!response.ok) {
-          throw new Error('Failed to fetch shops');
+          throw new Error('Failed to fetch shop');
         }
         const data = await response.json();
-        setShops(data);
+        setShops([data]); // Set as array with single item
         setError(null);
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') {

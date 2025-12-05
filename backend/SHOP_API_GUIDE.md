@@ -270,6 +270,51 @@ DELETE /api/shop-inventory/:id
 
 ### 🔍 Search APIs
 
+#### 9.5 Get Shop's Own Inventory
+```
+GET /api/shop-inventory/shop/:shopId
+```
+
+**Description:** Get all inventory items for a specific shop (grouped by shop).
+This endpoint is used by shop owners to view their own inventory.
+
+**Example:** `GET /api/shop-inventory/shop/507f1f77bcf86cd799439011`
+
+**Response (200):**
+```json
+[
+  {
+    "shop": {
+      "_id": "507f1f77bcf86cd799439011",
+      "shopName": "ร้านอ้อยเชียงใหม่",
+      "username": "@shop_chiangmai",
+      "email": "shop@example.com",
+      "phone": "053-123456",
+      "address": "123 ถนนท่าแพ",
+      "district": "เมืองเชียงใหม่",
+      "province": "เชียงใหม่",
+      "shop_image": "shop-1.jpg"
+    },
+    "inventories": [
+      {
+        "_id": "507f1f77bcf86cd799439013",
+        "variety": {
+          "_id": "507f1f77bcf86cd799439012",
+          "name": "พันธุ์อ้อย เค 88-92",
+          "soil_type": "ดินร่วนเหนียว",
+          "yield": "15-16"
+        },
+        "price": 2500,
+        "status": "available",
+        "quantity": 50,
+        "createdAt": "2024-01-15T10:30:00Z",
+        "updatedAt": "2024-01-15T10:30:00Z"
+      }
+    ]
+  }
+]
+```
+
 #### 10. Find All Shops Selling Specific Variety
 ```
 GET /api/shop-inventory/variety/:varietyId
@@ -278,7 +323,7 @@ GET /api/shop-inventory/variety/:varietyId
 **Example:** `GET /api/shop-inventory/variety/507f1f77bcf86cd799439012`
 
 **Response (200):**
-```json
+````
 [
   {
     "_id": "507f1f77bcf86cd799439013",

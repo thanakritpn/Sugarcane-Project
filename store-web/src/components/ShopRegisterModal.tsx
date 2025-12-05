@@ -63,10 +63,15 @@ export default function ShopRegisterModal({ isOpen, onClose, onSuccess }: ShopRe
     if (!formData.username.trim()) return "กรุณากรอกชื่อผู้ใช้";
     if (!formData.email.trim()) return "กรุณากรอกอีเมล";
     if (!formData.password) return "กรุณากรอกรหัสผ่าน";
-    if (formData.password.length < 6) return "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร";
+    if (formData.password.length < 8) return "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร";
+    if (!/[a-z]/.test(formData.password)) return "รหัสผ่านต้องมีตัวอักษรพิมพ์เล็กอย่างน้อย 1 ตัว";
+    if (!/[A-Z]/.test(formData.password)) return "รหัสผ่านต้องมีตัวอักษรพิมพ์ใหญ่อย่างน้อย 1 ตัว";
+    if (!/[0-9]/.test(formData.password)) return "รหัสผ่านต้องมีตัวเลขอย่างน้อย 1 ตัว";
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password)) return "รหัสผ่านต้องมีอักขระพิเศษอย่างน้อย 1 ตัว (!@#$%^&* เป็นต้น)";
     if (formData.password !== formData.confirmPassword) return "รหัสผ่านไม่ตรงกัน";
     if (!formData.shopName.trim()) return "กรุณากรอกชื่อร้าน";
     if (!formData.phone.trim()) return "กรุณากรอกหมายเลขโทรศัพท์";
+    if (!/^[0-9]{9,10}$/.test(formData.phone)) return "หมายเลขโทรศัพท์ต้องเป็นตัวเลข 9-10 หลัก";
     if (!formData.address.trim()) return "กรุณากรอกที่อยู่";
     if (!formData.district.trim()) return "กรุณากรอกอำเภอ";
     if (!formData.province.trim()) return "กรุณากรอกจังหวัด";
@@ -228,6 +233,11 @@ export default function ShopRegisterModal({ isOpen, onClose, onSuccess }: ShopRe
                   disabled={isLoading}
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent transition-all duration-200"
                 />
+                {formData.password && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    ต้องมี: 8+ ตัวอักษร, UPPERCASE, lowercase, 0-9, !@#$%^&*
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">

@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Header from "./components/Header";
 import ContentManager from "./ContentManager";
-import UserManager from "./pages/UserManager";
+import InventoryManager from "./pages/InventoryManager";
 import ShopManager from "./pages/ShopManager";
 import ToastContainer, { useToast } from "./components/ToastContainer";
 import ShopRegisterModal from "./components/ShopRegisterModal";
@@ -13,8 +13,14 @@ import bgUrl from "./assets/bg.jpg";
 function App() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [shopData, setShopData] = useState<any>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    const saved = localStorage.getItem('shopData');
+    return !!saved;
+  });
+  const [shopData, setShopData] = useState<any>(() => {
+    const saved = localStorage.getItem('shopData');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -33,6 +39,9 @@ function App() {
     setError("");
     
     try {
+      console.log('🔄 กำลังเข้าสู่ระบบ...');
+      console.log('Email:', email);
+      
       // Call shop authentication API
       const response = await fetch('http://localhost:5001/api/shops/login', {
         method: 'POST',
@@ -42,20 +51,30 @@ function App() {
         body: JSON.stringify({ email, password }),
       });
       
+      console.log('📊 Response status:', response.status);
+      
       const data = await response.json();
+      console.log('📦 Response data:', data);
       
       if (!response.ok) {
-        throw new Error(data.error || 'เข้าสู่ระบบไม่สำเร็จ');
+        const errorMsg = data.error || 'เข้าสู่ระบบไม่สำเร็จ';
+        console.error('❌ Login failed:', errorMsg);
+        throw new Error(errorMsg);
       }
       
-      // Successful login
-      setShopData(data.data);
+      // Successful login - save to localStorage
+      console.log('✅ Login successful!');
+      console.log('👤 Shop data:', data.data);
+      
+      const shopInfo = data.data;
+      setShopData(shopInfo);
+      localStorage.setItem('shopData', JSON.stringify(shopInfo));
       setIsLoggedIn(true);
       setPassword("");
-      addToast(`ยินดีต้อนรับ ${data.data.shopName}`, 'success');
+      addToast(`ยินดีต้อนรับ ${shopInfo.shopName}`, 'success');
       
     } catch (err: any) {
-      console.error('Login error:', err);
+      console.error('❌ Login error:', err);
       const errorMessage = err.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ';
       setError(errorMessage);
     } finally {
@@ -220,7 +239,10 @@ function App() {
       <Header 
         query={searchQuery}
         setQuery={setSearchQuery}
-        onLogout={() => setIsLoggedIn(false)}
+        onLogout={() => {
+          setIsLoggedIn(false);
+          localStorage.removeItem('shopData');
+        }}
       />
       <Routes>
         <Route path="/" element={<ContentManager onLogout={() => {
@@ -229,15 +251,17 @@ function App() {
           setEmail("");
           setPassword("");
           setError("");
+          localStorage.removeItem('shopData');
           addToast('ออกจากระบบเรียบร้อยแล้ว', 'success');
         }} />} />
-        <Route path="/users" element={<UserManager />} />
+        <Route path="/users" element={<InventoryManager />} />
         <Route path="/content" element={<ContentManager onLogout={() => {
           setIsLoggedIn(false);
           setShopData(null);
           setEmail("");
           setPassword("");
           setError("");
+          localStorage.removeItem('shopData');
           addToast('ออกจากระบบเรียบร้อยแล้ว', 'success');
         }} />} />
         <Route path="/stores" element={<ShopManager />} />

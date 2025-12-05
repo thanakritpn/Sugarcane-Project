@@ -10,6 +10,7 @@ interface UserFormData {
   password: string;
   role: 'Admin' | 'User';
   profile_image?: string;
+  phone?: string;
 }
 
 const AddUserForm = ({
@@ -102,6 +103,24 @@ const AddUserForm = ({
                        isEditMode ? 'bg-gray-200 cursor-not-allowed text-gray-600' : ''
                      }`}
         />
+      </div>
+
+      {/* เบอร์โทรศัพท์ */}
+      <div>
+        <label className="block text-sm font-semibold text-gray-800">
+          เบอร์โทรศัพท์
+        </label>
+        <input
+          type="tel"
+          value={formData.phone || ''}
+          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+          placeholder="ระบุเบอร์โทรศัพท์ (เช่น 0812345678)"
+          className="w-full border rounded-md px-3 py-2 text-gray-900 
+                     focus:ring-2 focus:ring-[#15803D] outline-none"
+        />
+        <div className="mt-1 text-xs text-gray-500">
+          • ไม่บังคับ • รูปแบบ: 09xxxxxxxx หรือ 08xxxxxxxx
+        </div>
       </div>
 
       {/* รหัสผ่าน */}

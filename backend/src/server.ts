@@ -108,7 +108,7 @@ mongoose.connect(process.env.DATABASE_URL!)
 app.get('/api/users', async (_req: Request, res: Response) => {
     try {
         const users = await User.find()
-            .select('username email role profile_image createdAt')
+            .select('username email role profile_image phone createdAt')
             .sort({ createdAt: -1 })
             .lean();
         res.json(users);
@@ -122,7 +122,7 @@ app.get('/api/users', async (_req: Request, res: Response) => {
 app.get('/api/users/:id', async (req: Request, res: Response): Promise<void> => {
     try {
         const user = await User.findById(req.params.id)
-            .select('username email role createdAt')
+            .select('username email role phone createdAt')
             .lean();
         
         if (!user) {
@@ -334,6 +334,7 @@ app.post('/api/users', userUpload.single('profile_image'), async (req: Request, 
             password: hashedPassword,
             role: body.role || 'User',
             profile_image: file ? file.filename : '',
+            phone: body.phone || '',
         };
 
         const newUser = new User(newUserData);
@@ -348,6 +349,7 @@ app.post('/api/users', userUpload.single('profile_image'), async (req: Request, 
                 email: savedUser.email,
                 role: savedUser.role,
                 profile_image: savedUser.profile_image,
+                phone: savedUser.phone,
                 createdAt: savedUser.createdAt,
             }
         });
@@ -389,6 +391,7 @@ app.put('/api/users/:id', userUpload.single('profile_image'), async (req: Reques
         if (body.username) user.username = body.username;
         if (body.email) user.email = body.email;
         if (body.role) user.role = body.role;
+        if (body.phone !== undefined) user.phone = body.phone;
 
         // Update password if provided
         if (body.password) {
@@ -412,6 +415,7 @@ app.put('/api/users/:id', userUpload.single('profile_image'), async (req: Reques
                 email: updatedUser.email,
                 role: updatedUser.role,
                 profile_image: updatedUser.profile_image,
+                phone: updatedUser.phone,
                 createdAt: updatedUser.createdAt,
             }
         });
@@ -1525,6 +1529,95 @@ app.delete('/api/shop-inventory/:id', async (req: Request, res: Response) => {
     }
 });
 
+// API: Get all shop inventories grouped by shop (for inventory management)
+app.get('/api/shop-inventory/grouped', async (_req: Request, res: Response) => {
+    try {
+        const inventories = await ShopInventory.find({})
+            .populate('shopId', '-password')
+            .populate('varietyId')
+            .sort({ 'shopId.shopName': 1, 'varietyId.name': 1 })
+            .lean();
+        
+        // Group inventories by shop
+        const groupedInventories: { [key: string]: any } = {};
+        
+        inventories.forEach((inventory: any) => {
+            if (!inventory.shopId || !inventory.varietyId) return;
+            
+            const shopId = inventory.shopId._id.toString();
+            
+            if (!groupedInventories[shopId]) {
+                groupedInventories[shopId] = {
+                    shop: inventory.shopId,
+                    inventories: []
+                };
+            }
+            
+            groupedInventories[shopId].inventories.push({
+                _id: inventory._id,
+                variety: inventory.varietyId,
+                price: inventory.price,
+                status: inventory.status,
+                quantity: inventory.quantity,
+                createdAt: inventory.createdAt,
+                updatedAt: inventory.updatedAt
+            });
+        });
+        
+        // Convert to array
+        const result = Object.values(groupedInventories);
+        
+        res.json(result);
+    } catch (err: any) {
+        console.error('Get grouped inventories error:', err);
+        res.status(500).json({ 
+            error: 'Failed to fetch inventories',
+            details: err.message 
+        });
+    }
+});
+
+// API: Get shop inventory by shop ID (for owner to view their own inventory)
+app.get('/api/shop-inventory/shop/:shopId', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const inventories = await ShopInventory.find({ shopId: req.params.shopId })
+            .populate('shopId', '-password')
+            .populate('varietyId')
+            .sort({ 'varietyId.name': 1 })
+            .lean();
+        
+        // Get shop info
+        const shop = inventories.length > 0 ? inventories[0].shopId : null;
+        
+        if (!shop) {
+            res.json([]);
+            return;
+        }
+        
+        // Group by shop (will be only one shop)
+        const result = [{
+            shop: shop,
+            inventories: inventories.map(inv => ({
+                _id: inv._id,
+                variety: inv.varietyId,
+                price: inv.price,
+                status: inv.status,
+                quantity: inv.quantity,
+                createdAt: inv.createdAt,
+                updatedAt: inv.updatedAt
+            }))
+        }];
+        
+        res.json(result);
+    } catch (err: any) {
+        console.error('Get shop inventory error:', err);
+        res.status(500).json({ 
+            error: 'Failed to fetch shop inventory',
+            details: err.message 
+        });
+    }
+});
+
 // API: Get all shop inventories (for searching by variety)
 app.get('/api/shop-inventory/variety/:varietyId', async (req: Request, res: Response) => {
     try {
@@ -1725,12 +1818,14 @@ app.listen(PORT, () => {
     console.log(`   GET    /api/shops/:id          - Get shop by ID`);
     console.log(`   PUT    /api/shops/:id          - Update shop info`);
     console.log(`   POST   /api/shop-inventory    - Add variety to inventory`);
+    console.log(`   GET    /api/shop-inventory/grouped - Get all inventories grouped by shop`);
     console.log(`   GET    /api/shops/:shopId/inventory - Get shop inventory`);
     console.log(`   PUT    /api/shop-inventory/:id - Update inventory (price/status)`);
     console.log(`   DELETE /api/shop-inventory/:id - Remove item from inventory`);
     console.log(`   GET    /api/shop-inventory/variety/:varietyId - Find shops selling variety`);
     console.log(`   POST   /api/cart               - Add item to cart`);
     console.log(`   GET    /api/cart/:userId       - Get user's cart`);
+    console.log(`   GET    /api/cart/all-paid      - Get all paid cart items (orders)`);
     console.log(`   PUT    /api/cart/:cartId       - Update cart item`);
     console.log(`   DELETE /api/cart/:cartId       - Remove item from cart`);
     console.log(`   DELETE /api/cart-clear/:userId - Clear user's cart`);

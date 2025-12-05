@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true }, // hashed
   role: { type: String, default: 'User', enum: ['Admin', 'User'] },
   profile_image: { type: String, default: '' }, // profile image filename
+  phone: { type: String, default: '' }, // phone number
 }, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);
