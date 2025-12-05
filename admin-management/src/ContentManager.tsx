@@ -1,5 +1,8 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
+import { FaEdit } from 'react-icons/fa'
 import VarietyModal from './components/VarietyModal'
+import Header from './components/Header'
+import ToastContainer, { useToast } from './components/ToastContainer'
 
 type MenuItem = {
   _id?: string
@@ -56,11 +59,7 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
   const [deleteModal, setDeleteModal] = useState<{ show: boolean; itemId?: string }>({ show: false })
 
   // Toast notification state
-  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'add' | 'edit' }>({
-    show: false,
-    message: '',
-    type: 'add',
-  })
+  const { toasts, addToast, removeToast } = useToast();
 
   // refs for modal scroll containers so we can reset scroll position when reopening
   const addPanelRef = useRef<HTMLDivElement | null>(null)
@@ -119,12 +118,12 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
       if (!response.ok) {
         throw new Error('Failed to delete variety')
       }
+      const deletedItem = items.find(item => item._id === id);
       setItems(items.filter(item => item._id !== id))
-      setToast({ show: true, message: 'ลบพันธุ์อ้อยเรียบร้อยแล้ว', type: 'edit' })
-      setTimeout(() => setToast({ show: false, message: '', type: 'edit' }), 2000)
+      addToast('ลบพันธุ์อ้อยเรียบร้อยแล้ว: ' + (deletedItem?.name || 'พันธุ์'), 'success');
     } catch (err) {
       console.error('Error deleting variety:', err)
-      alert('เกิดข้อผิดพลาดในการลบ')
+      addToast('เกิดข้อผิดพลาดในการลบพันธุ์อ้อย', 'error', 4000);
     }
     setDeleteModal({ show: false })
   }
@@ -281,20 +280,11 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
       setLoading(false)
 
       // Show toast notification
-      setToast({
-        show: true,
-        message: 'เพิ่มพันธุ์อ้อยเรียบร้อยแล้ว',
-        type: 'add',
-      })
-      
-      // Auto-close toast after 2 seconds
-      setTimeout(() => {
-        setToast({ show: false, message: '', type: 'add' })
-      }, 2000)
+      addToast('เพิ่มพันธุ์อ้อยเรียบร้อยแล้ว: ' + formData.name, 'success');
     } catch (err) {
       console.error('Error creating variety:', err)
       setLoading(false)
-      alert('ไม่สามารถเพิ่มพันธุ์อ้อยได้ โปรดลองอีกครั้ง')
+      addToast('เกิดข้อผิดพลาด: ไม่สามารถเพิ่มพันธุ์อ้อยได้', 'error', 4000);
     }
   }
 
@@ -368,78 +358,53 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
       setLoading(false)
 
       // Show toast notification
-      setToast({
-        show: true,
-        message: 'บันทึกการเปลี่ยนแปลงเรียบร้อยแล้ว',
-        type: 'edit',
-      })
-      
-      // Auto-close toast after 2 seconds
-      setTimeout(() => {
-        setToast({ show: false, message: '', type: 'edit' })
-      }, 2000)
+      addToast('บันทึกการเปลี่ยนแปลงเรียบร้อยแล้ว: ' + (editingItem?.name || 'พันธุ์'), 'success');
     } catch (err) {
       console.error('Error updating variety:', err)
       setLoading(false)
-      alert('ไม่สามารถบันทึกการเปลี่ยนแปลงได้ โปรดลองอีกครั้ง')
+      addToast('เกิดข้อผิดพลาด: ไม่สามารถบันทึกการเปลี่ยนแปลงได้', 'error', 4000);
     }
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation Bar */}
-      <nav className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
-        <div className="px-8 py-4">
-          <div className="max-w-7xl mx-auto flex items-center justify-between gap-8">
-            <div className="flex items-center gap-3">
-              {/* Sugarcane SVG Logo */}
-              <span className="inline-block">
-                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <ellipse cx="20" cy="20" rx="18" ry="18" fill="#E6F4EA" />
-                  <path d="M13 30C15 22 17 14 20 10C23 14 25 22 27 30" stroke="#16A34A" strokeWidth="2.5" strokeLinecap="round"/>
-                  <path d="M18 28C19 24 20 20 22 16" stroke="#22C55E" strokeWidth="2" strokeLinecap="round"/>
-                  <path d="M15 25C16.5 21 18.5 17 20 15" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round"/>
-                  <circle cx="20" cy="20" r="18" stroke="#16A34A" strokeWidth="1.5"/>
-                </svg>
-              </span>
-              <h1 className="text-lg font-bold text-gray-900 whitespace-nowrap">รายการพันธุ์อ้อยทั้งหมด</h1>
-            </div>
+      <Header query={query} setQuery={setQuery} onLogout={onLogout} itemCount={items.length} />
 
-            <div className="flex-1 flex items-center justify-center">
-              <div className="w-full max-w-2xl">
-                <label className="sr-only">ค้นหา</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="ค้นหา..."
-                    className="w-full px-4 py-2 pl-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#16A34A] text-gray-900"
+      <div className="min-h-screen bg-gray-50 p-8 pt-[96px]">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              {/* Icon circle */}
+              <div className="w-12 h-12 rounded-full bg-[#1D724A] flex items-center justify-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-6 h-6 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 2C9 3 6 7 6 10c0 3 2 5 6 10 4-5 6-7 6-10 0-3-3-7-6-8z"
                   />
-                  <svg className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M12.9 14.32a8 8 0 111.414-1.414l4.387 4.386-1.414 1.415-4.387-4.387zM8 14a6 6 0 100-12 6 6 0 000 12z" clipRule="evenodd" />
-                  </svg>
-                </div>
+                </svg>
+              </div>
+
+              {/* Text */}
+              <div className="leading-tight">
+                <h2 className="text-xl font-bold text-gray-800">
+                  รายการพันธุ์อ้อยทั้งหมด
+                </h2>
+                <p className="text-gray-500">
+                  พบ {items.length} รายการ
+                </p>
               </div>
             </div>
 
-            <button
-              onClick={onLogout}
-              className="text-gray-600 hover:text-red-600 transition p-2"
-              title="ออกจากระบบ"
-              aria-label="ออกจากระบบ"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      <div className="min-h-screen bg-gray-50 p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-end mb-6">
+            {/* Add Variety Button */}
             <button
               onClick={() => setShowAddPanel(true)}
               className="bg-[#1D724A] hover:bg-[#155838] text-white font-semibold py-2.5 px-8 rounded-lg shadow-md hover:shadow-lg transition"
@@ -533,8 +498,9 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
                   {/* Edit Button */}
                   <button
                     onClick={() => setEditingItem(item)}
-                    className="bg-[#1D724A] hover:bg-[#155838] text-white font-semibold py-2.5 rounded-lg shadow-md hover:shadow-lg transition"
+                    className="bg-[#1D724A] hover:bg-[#155838] text-white font-semibold py-2.5 rounded-lg shadow-md hover:shadow-lg transition flex items-center justify-center gap-2"
                   >
+                    <FaEdit className="text-lg" />
                     แก้ไข
                   </button>
                 </div>
@@ -584,20 +550,12 @@ export default function ContentManager({ onLogout }: { onLogout: () => void }) {
             onSubmit={showAddPanel ? handleAddSubmit : handleEditSubmit}
           />
 
-          {/* Toast Notification - Top Right */}
-          {toast.show && (
-            <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
-              <div className="bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3">
-                <svg className="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span className="font-medium">{toast.message}</span>
-              </div>
-            </div>
-          )}
         </div>
         </div>
       </div>
+      
+      {/* Toast Container */}
+      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
     </div>
   )
 }

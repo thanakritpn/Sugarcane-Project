@@ -343,36 +343,44 @@ function Home() {
 
                         {/* Main Content Area */}
                         <div className="flex-1">
-                            <div className="flex items-center gap-4 mb-6">
-                                
-                                {/* Icon circle */}
-                                <div className="w-12 h-12 rounded-full bg-[#1D724A] flex items-center justify-center">
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        className="w-6 h-6 text-white"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            d="M12 2C9 3 6 7 6 10c0 3 2 5 6 10 4-5 6-7 6-10 0-3-3-7-6-8z"
-                                        />
-                                    </svg>
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-4">
+                                    {/* Icon circle */}
+                                    <div className="w-12 h-12 rounded-full bg-[#1D724A] flex items-center justify-center">
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            className="w-6 h-6 text-white"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                d="M12 2C9 3 6 7 6 10c0 3 2 5 6 10 4-5 6-7 6-10 0-3-3-7-6-8z"
+                                            />
+                                        </svg>
+                                    </div>
+
+                                    {/* Text */}
+                                    <div className="leading-tight">
+                                        <h2 className="text-3xl font-bold text-gray-800">
+                                            พันธุ์อ้อย
+                                        </h2>
+                                        <p className="text-gray-500">
+                                            พบ {filteredItems.length} รายการ
+                                        </p>
+                                    </div>
                                 </div>
 
-                                {/* Text */}
-                                <div className="leading-tight">
-                                    <h2 className="text-3xl font-bold text-gray-800">
-                                        พันธุ์อ้อย
-                                    </h2>
-                                    <p className="text-gray-500">
-                                        พบ {filteredItems.length} รายการ
-                                    </p>
-                                </div>
-
+                                {/* Add Variety Button */}
+                                <button
+                                    className="bg-[#1D724A] text-white px-4 py-2 rounded-md hover:bg-[#155d37]"
+                                    onClick={() => navigate('/add-variety')}
+                                >
+                                    เพิ่มพันธุ์อ้อย
+                                </button>
                             </div>
 
                             {/* Loading State */}

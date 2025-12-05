@@ -25,6 +25,18 @@ if (!fs.existsSync(imagesVarietyDir)) {
     fs.mkdirSync(imagesVarietyDir, { recursive: true });
 }
 
+// Ensure images/users directory exists
+const imagesUsersDir = path.join(process.cwd(), 'images', 'users');
+if (!fs.existsSync(imagesUsersDir)) {
+    fs.mkdirSync(imagesUsersDir, { recursive: true });
+}
+
+// Ensure images/shops directory exists
+const imagesShopsDir = path.join(process.cwd(), 'images', 'shops');
+if (!fs.existsSync(imagesShopsDir)) {
+    fs.mkdirSync(imagesShopsDir, { recursive: true });
+}
+
 const storage = multer.diskStorage({
     // use multer/express types now that @types/multer is installed
     destination: (_req: Request, _file: Express.Multer.File, cb: (err: Error | null, destination: string) => void) => cb(null, imagesVarietyDir),
@@ -34,14 +46,201 @@ const storage = multer.diskStorage({
     }
 });
 
+// User profile image storage
+const userStorage = multer.diskStorage({
+    destination: (_req: Request, _file: Express.Multer.File, cb: (err: Error | null, destination: string) => void) => cb(null, imagesUsersDir),
+    filename: (_req: Request, file: Express.Multer.File, cb: (err: Error | null, filename: string) => void) => {
+        const unique = Date.now() + '-' + Math.round(Math.random() * 1e9) + path.extname(file.originalname);
+        cb(null, unique);
+    }
+});
+
+// Shop image storage
+const shopStorage = multer.diskStorage({
+    destination: (_req: Request, _file: Express.Multer.File, cb: (err: Error | null, destination: string) => void) => cb(null, imagesShopsDir),
+    filename: (_req: Request, file: Express.Multer.File, cb: (err: Error | null, filename: string) => void) => {
+        const unique = Date.now() + '-' + Math.round(Math.random() * 1e9) + path.extname(file.originalname);
+        cb(null, unique);
+    }
+});
+
 const upload = multer({ storage });
+const userUpload = multer({ storage: userStorage });
+const shopUpload = multer({ storage: shopStorage });
 
 // Connect to MongoDB
 mongoose.connect(process.env.DATABASE_URL!)
-    .then(() => console.log('✓ Connected to MongoDB Atlas'))
+    .then(async () => {
+        console.log('✓ Connected to MongoDB Atlas');
+        
+        // Ensure admin user exists on startup
+        try {
+            const adminExists = await User.findOne({ role: 'Admin' });
+            if (!adminExists) {
+                console.log('➕ Creating default admin user...');
+                const salt = await bcrypt.genSalt(12);
+                const hashedPassword = await bcrypt.hash('admin_12345678', salt);
+                
+                const newAdmin = new User({
+                    username: 'admin',
+                    email: 'admin@gmail.com',
+                    password: hashedPassword,
+                    role: 'Admin',
+                    profile_image: ''
+                });
+                
+                await newAdmin.save();
+                console.log('✅ Default admin user created');
+                console.log('   Username: admin');
+                console.log('   Password: admin_12345678');
+            } else {
+                console.log('✅ Admin user already exists');
+            }
+        } catch (error) {
+            console.error('❌ Error checking/creating admin:', error);
+        }
+    })
     .catch((err) => console.error('MongoDB connection error:', err));
 
 // ==================== READ APIs ====================
+
+// API: Get all users
+app.get('/api/users', async (_req: Request, res: Response) => {
+    try {
+        const users = await User.find()
+            .select('username email role profile_image createdAt')
+            .sort({ createdAt: -1 })
+            .lean();
+        res.json(users);
+    } catch (err) {
+        console.error('Database query error:', err);
+        res.status(500).json({ error: 'Database query error' });
+    }
+});
+
+// API: Get user by ID
+app.get('/api/users/:id', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const user = await User.findById(req.params.id)
+            .select('username email role createdAt')
+            .lean();
+        
+        if (!user) {
+            res.status(404).json({ error: 'User not found' });
+            return;
+        }
+        
+        res.json(user);
+    } catch (err) {
+        console.error('Database query error:', err);
+        res.status(500).json({ error: 'Database query error' });
+    }
+});
+
+// API: Check if username exists
+app.post('/api/users/check-username', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { username, excludeId } = req.body;
+        
+        if (!username) {
+            res.status(400).json({ error: 'Username is required' });
+            return;
+        }
+        
+        // Build query to exclude current user if editing
+        const query: any = { username };
+        if (excludeId && mongoose.Types.ObjectId.isValid(excludeId)) {
+            query._id = { $ne: new mongoose.Types.ObjectId(excludeId) };
+        }
+        
+        const existingUser = await User.findOne(query);
+        
+        res.json({ exists: !!existingUser });
+    } catch (err) {
+        console.error('Error checking username:', err);
+        res.status(500).json({ error: 'Failed to check username' });
+    }
+});
+
+// API: Check if email exists
+app.post('/api/users/check-email', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { email, excludeId } = req.body;
+        
+        if (!email) {
+            res.status(400).json({ error: 'Email is required' });
+            return;
+        }
+        
+        // Build query to exclude current user if editing
+        const query: any = { email };
+        if (excludeId && mongoose.Types.ObjectId.isValid(excludeId)) {
+            query._id = { $ne: new mongoose.Types.ObjectId(excludeId) };
+        }
+        
+        const existingUser = await User.findOne(query);
+        
+        res.json({ exists: !!existingUser });
+    } catch (err) {
+        console.error('Error checking email:', err);
+        res.status(500).json({ error: 'Failed to check email' });
+    }
+});
+
+// API: Admin login authentication
+app.post('/api/auth/admin-login', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { username, password } = req.body;
+        
+        if (!username || !password) {
+            res.status(400).json({ error: 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน' });
+            return;
+        }
+        
+        // Find user by username or email (accept both)
+        const user = await User.findOne({
+            $or: [
+                { username: username },
+                { email: username }  // Allow email as input too
+            ]
+        }).select('+password');
+        
+        if (!user) {
+            res.status(401).json({ error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
+            return;
+        }
+        
+        // Check password
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        
+        if (!isPasswordValid) {
+            res.status(401).json({ error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
+            return;
+        }
+        
+        // Check if user has Admin role
+        if (user.role !== 'Admin') {
+            res.status(403).json({ error: 'คุณไม่มีสิทธิ์เข้าถึงระบบจัดการ Admin เท่านั้น' });
+            return;
+        }
+        
+        // Successful login
+        res.json({
+            message: 'เข้าสู่ระบบสำเร็จ',
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                role: user.role,
+                profile_image: user.profile_image
+            }
+        });
+        
+    } catch (err) {
+        console.error('Admin login error:', err);
+        res.status(500).json({ error: 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ' });
+    }
+});
 
 // API: Get all varieties
 app.get('/api/varieties', async (_req: Request, res: Response) => {
@@ -105,6 +304,125 @@ app.get('/api/varieties/:id', async (req: Request, res: Response): Promise<void>
 });
 
 // ==================== CREATE API ====================
+
+// API: Create new user
+app.post('/api/users', userUpload.single('profile_image'), async (req: Request, res: Response) => {
+    try {
+        const body: any = req.body || {};
+        const file = (req as any).file;
+
+        console.log('Creating new user with data:', { username: body.username, email: body.email, role: body.role, hasFile: !!file });
+
+        // Check if username or email already exists
+        const existingUser = await User.findOne({
+            $or: [{ username: body.username }, { email: body.email }]
+        });
+
+        if (existingUser) {
+            console.error('User already exists:', { username: body.username, email: body.email });
+            res.status(400).json({ error: 'Username or email already exists' });
+            return;
+        }
+
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(body.password, salt);
+
+        const newUserData: any = {
+            username: body.username,
+            email: body.email,
+            password: hashedPassword,
+            role: body.role || 'User',
+            profile_image: file ? file.filename : '',
+        };
+
+        const newUser = new User(newUserData);
+        const savedUser = await newUser.save();
+        console.log('User saved to database:', savedUser._id, { username: savedUser.username, email: savedUser.email });
+
+        res.status(201).json({
+            message: 'User created successfully',
+            data: {
+                _id: savedUser._id,
+                username: savedUser.username,
+                email: savedUser.email,
+                role: savedUser.role,
+                profile_image: savedUser.profile_image,
+                createdAt: savedUser.createdAt,
+            }
+        });
+    } catch (err: any) {
+        console.error('Error creating user:', err);
+        res.status(500).json({
+            error: 'Failed to create user',
+            details: err.message
+        });
+    }
+});
+
+// API: Update user
+app.put('/api/users/:id', userUpload.single('profile_image'), async (req: Request, res: Response) => {
+    try {
+        const userId = req.params.id;
+        const body: any = req.body || {};
+        const file = (req as any).file;
+
+        console.log('Updating user with ID:', userId);
+        console.log('Request body:', body);
+
+        // Validate ObjectId
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            console.error('Invalid user ID format:', userId);
+            res.status(400).json({ error: 'Invalid user ID format' });
+            return;
+        }
+
+        // Find the user
+        const user = await User.findById(userId);
+        if (!user) {
+            console.error('User not found with ID:', userId);
+            res.status(404).json({ error: 'User not found' });
+            return;
+        }
+
+        // Update basic fields
+        if (body.username) user.username = body.username;
+        if (body.email) user.email = body.email;
+        if (body.role) user.role = body.role;
+
+        // Update password if provided
+        if (body.password) {
+            const salt = await bcrypt.genSalt(10);
+            user.password = await bcrypt.hash(body.password, salt);
+        }
+
+        // Update profile image if provided
+        if (file) {
+            user.profile_image = file.filename;
+        }
+
+        const updatedUser = await user.save();
+        console.log('User updated successfully:', updatedUser._id);
+
+        res.status(200).json({
+            message: 'User updated successfully',
+            data: {
+                _id: updatedUser._id,
+                username: updatedUser.username,
+                email: updatedUser.email,
+                role: updatedUser.role,
+                profile_image: updatedUser.profile_image,
+                createdAt: updatedUser.createdAt,
+            }
+        });
+    } catch (err: any) {
+        console.error('Error updating user:', err);
+        res.status(500).json({
+            error: 'Failed to update user',
+            details: err.message
+        });
+    }
+});
 
 // API: Create new variety
 // Support multipart/form-data (optional file) for create
@@ -230,6 +548,41 @@ app.delete('/api/varieties/:id', async (req: Request, res: Response): Promise<vo
         console.error('Database delete error:', err);
         res.status(500).json({ 
             error: 'Failed to delete variety',
+            details: err.message 
+        });
+    }
+});
+
+// API: Delete user
+app.delete('/api/users/:id', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const userId = req.params.id;
+        console.log('Deleting user with ID:', userId);
+
+        // Validate ObjectId
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            console.error('Invalid user ID format:', userId);
+            res.status(400).json({ error: 'Invalid user ID format' });
+            return;
+        }
+
+        const deletedUser = await User.findByIdAndDelete(userId);
+
+        if (!deletedUser) {
+            console.error('User not found with ID:', userId);
+            res.status(404).json({ error: 'User not found' });
+            return;
+        }
+
+        console.log('User deleted successfully:', userId);
+        res.json({
+            message: 'User deleted successfully',
+            data: deletedUser
+        });
+    } catch (err: any) {
+        console.error('Database delete error:', err);
+        res.status(500).json({ 
+            error: 'Failed to delete user',
             details: err.message 
         });
     }
@@ -452,22 +805,32 @@ async function ensureInitialUser() {
 
 ensureInitialUser();
 
-// Ensure user indexes are correct and clean up old collections
+// Ensure user indexes are correct (without dropping data)
 async function ensureUserIndexes() {
     try {
-        // Drop the old collection if it exists (to force recreate with new schema)
+        // IMPORTANT: Do NOT drop the User collection as it will destroy all data including admin user!
+        // Just ensure the indexes exist
+        
+        // Create indexes without dropping collection
+        // If index already exists, this will be a no-op
         try {
-            await User.collection.drop();
-            console.log('✓ Dropped old User collection to recreate with new schema');
+            await User.collection.createIndex({ email: 1 }, { unique: true, sparse: true });
         } catch (err: any) {
-            if (err.code !== 26) { // 26 = namespace not found
-                console.warn('Warning when dropping User collection:', err.message);
+            // Index may already exist, ignore conflict error
+            if (err.code !== 86) { // 86 = IndexKeySpecsConflict
+                throw err;
             }
         }
-
-        // Create new indexes
-        await User.collection.createIndex({ email: 1 }, { unique: true });
-        await User.collection.createIndex({ username: 1 }, { unique: true });
+        
+        try {
+            await User.collection.createIndex({ username: 1 }, { unique: true, sparse: true });
+        } catch (err: any) {
+            // Index may already exist, ignore conflict error
+            if (err.code !== 86) { // 86 = IndexKeySpecsConflict
+                throw err;
+            }
+        }
+        
         console.log('✓ Ensured User indexes (email, username)');
     } catch (err) {
         console.error('Error ensuring user indexes:', err);
@@ -475,9 +838,6 @@ async function ensureUserIndexes() {
 }
 
 ensureUserIndexes();
-
-// Re-seed users after indexes are created
-ensureInitialUser();
 
 // Ensure favorite indexes are correct (compound unique on userId + varietyId).
 async function ensureFavoriteIndexes() {
@@ -732,9 +1092,76 @@ app.delete('/api/favorites/:userId/:varietyId', async (req: Request, res: Respon
 // ==================== SHOP APIs ====================
 
 // API: Register new shop
-app.post('/api/shops/register', async (req: Request, res: Response) => {
+// ==================== SHOP APIs ====================
+
+// API: Create shop (for admin panel)
+app.post('/api/shops', userUpload.single('shop_image'), async (req: Request, res: Response) => {
     try {
         const { username, email, password, shopName, phone, address, district, province } = req.body;
+        const file = (req as any).file;
+
+        if (!username || !email || !password || !shopName || !phone || !address || !district || !province) {
+            res.status(400).json({ error: 'All fields are required' });
+            return;
+        }
+
+        // Check if shop already exists
+        const existingShop = await Shop.findOne({ $or: [{ email }, { username }] });
+        if (existingShop) {
+            res.status(409).json({ error: 'Shop already exists' });
+            return;
+        }
+
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        const newShopData: any = {
+            username,
+            email,
+            password: hashedPassword,
+            shopName,
+            phone,
+            address,
+            district,
+            province,
+        };
+
+        if (file) {
+            newShopData.shop_image = file.filename;
+        }
+
+        const newShop = new Shop(newShopData);
+        const savedShop = await newShop.save();
+
+        res.status(201).json({
+            message: 'Shop created successfully',
+            data: {
+                _id: savedShop._id,
+                username: savedShop.username,
+                email: savedShop.email,
+                shopName: savedShop.shopName,
+                phone: savedShop.phone,
+                address: savedShop.address,
+                district: savedShop.district,
+                province: savedShop.province,
+                shop_image: savedShop.shop_image,
+            }
+        });
+    } catch (err: any) {
+        console.error('Create shop error:', err);
+        res.status(500).json({ 
+            error: 'Failed to create shop',
+            details: err.message 
+        });
+    }
+});
+
+// API: Register new shop
+app.post('/api/shops/register', shopUpload.single('shop_image'), async (req: Request, res: Response) => {
+    try {
+        const { username, email, password, shopName, phone, address, district, province } = req.body;
+        const file = (req as any).file;
 
         if (!username || !email || !password || !shopName || !phone || !address || !district || !province) {
             res.status(400).json({ error: 'All fields are required' });
@@ -761,18 +1188,29 @@ app.post('/api/shops/register', async (req: Request, res: Response) => {
             address,
             district,
             province,
+            shop_image: file ? file.filename : ''
         });
 
         await newShop.save();
 
+        // Return the complete shop data (without password)
+        const shopData = {
+            _id: newShop._id,
+            username: newShop.username,
+            email: newShop.email,
+            shopName: newShop.shopName,
+            phone: newShop.phone,
+            address: newShop.address,
+            district: newShop.district,
+            province: newShop.province,
+            shop_image: newShop.shop_image,
+            createdAt: newShop.createdAt,
+            updatedAt: newShop.updatedAt,
+        };
+
         res.status(201).json({
             message: 'Shop registered successfully',
-            data: {
-                _id: newShop._id,
-                username: newShop.username,
-                email: newShop.email,
-                shopName: newShop.shopName,
-            }
+            data: shopData
         });
     } catch (err: any) {
         console.error('Register shop error:', err);
@@ -863,13 +1301,19 @@ app.get('/api/shops/:id', async (req: Request, res: Response) => {
 });
 
 // API: Update shop info
-app.put('/api/shops/:id', async (req: Request, res: Response) => {
+app.put('/api/shops/:id', shopUpload.single('shop_image'), async (req: Request, res: Response) => {
     try {
         const { shopName, phone, address, district, province } = req.body;
+        const file = (req as any).file;
         
+        const updateData: any = { shopName, phone, address, district, province };
+        if (file) {
+            updateData.shop_image = file.filename;
+        }
+
         const updatedShop = await Shop.findByIdAndUpdate(
             req.params.id,
-            { shopName, phone, address, district, province },
+            updateData,
             { new: true }
         ).select('-password');
 
@@ -886,6 +1330,40 @@ app.put('/api/shops/:id', async (req: Request, res: Response) => {
         console.error('Update shop error:', err);
         res.status(500).json({ 
             error: 'Failed to update shop',
+            details: err.message 
+        });
+    }
+});
+
+// API: Delete shop
+app.delete('/api/shops/:id', async (req: Request, res: Response) => {
+    try {
+        const shopId = req.params.id;
+
+        // Validate ObjectId
+        if (!mongoose.Types.ObjectId.isValid(shopId)) {
+            res.status(400).json({ error: 'Invalid shop ID format' });
+            return;
+        }
+
+        const deletedShop = await Shop.findByIdAndDelete(shopId);
+        
+        if (!deletedShop) {
+            res.status(404).json({ error: 'Shop not found' });
+            return;
+        }
+
+        // Also delete related shop inventory
+        await ShopInventory.deleteMany({ shopId });
+
+        res.json({
+            message: 'Shop deleted successfully',
+            data: { _id: deletedShop._id, shopName: deletedShop.shopName }
+        });
+    } catch (err: any) {
+        console.error('Delete shop error:', err);
+        res.status(500).json({ 
+            error: 'Failed to delete shop',
             details: err.message 
         });
     }

@@ -9,6 +9,7 @@ export interface IShop extends Document {
     address: string;
     district: string;
     province: string;
+    shop_image?: string; // shop image filename
     createdAt: Date;
     updatedAt: Date;
 }
@@ -51,6 +52,10 @@ const ShopSchema = new Schema<IShop>({
     province: {
         type: String,
         required: true,
+    },
+    shop_image: {
+        type: String,
+        default: '',
     },
 }, { timestamps: true });
 
